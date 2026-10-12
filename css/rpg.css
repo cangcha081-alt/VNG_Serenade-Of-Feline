@@ -1,0 +1,797 @@
+/* 像素字体 Zpix（本地，支持中文） */
+@font-face {
+  font-family: "Zpix";
+  src: url("../fonts/Zpix.woff2") format("woff2");
+  font-display: swap;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 本页引了 achieve.css（成就弹窗样式），其 body 夜空渐变会因加载顺序
+   覆盖上面的 #000，导致地图 letterbox 露出灰蓝底。用更高优先级选择器
+   压回纯黑（html body 特异性 0,0,2 > achieve.css 的 body 0,0,1）。 */
+html body {
+  background: #000;
+}
+
+/* ---- 舞台：地图按比例缩放居中 ---- */
+#stage {
+  position: fixed;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+}
+
+#map {
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+/* ---- 碰撞调试层（按 B 切换） ---- */
+#debug {
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  opacity: 0.45;
+  display: none;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ---- 人物：120x120 精灵，绝对定位在地图坐标系内 ---- */
+#player {
+  position: absolute;
+  width: 120px; height: 120px;
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 3;
+  /* 由 JS 设置 left/top 与 transform 翻转，翻转原点为中心，换方向不偏移 */
+  transform-origin: center center;
+  will-change: transform;
+}
+
+/* ---- 顶部信息条 ---- */
+#hud {
+  position: fixed;
+  left: 50%; top: 12px;
+  transform: translateX(-50%);
+  color: #e8e4d8;
+  background: rgba(10, 10, 14, 0.72);
+  border: 1px solid rgba(232, 228, 216, 0.25);
+  border-radius: 6px;
+  padding: 6px 18px;
+  font-size: 14px;
+  letter-spacing: 1px;
+  z-index: 20;
+  pointer-events: none;
+  white-space: nowrap;
+}
+#hud b { color: #ffd97a; font-weight: 600; }
+
+/* ---- 传送提示（与线索提示同款像素风） ---- */
+#teleport-tip {
+  position: fixed;
+  left: 50%; bottom: 48px;
+  transform: translateX(-50%) translateY(8px);
+  color: #e8e4d8;
+  background: rgba(10, 10, 14, 0.85);
+  border: 1px solid rgba(255, 217, 122, 0.55);
+  border-radius: 0;
+  box-shadow: 0 0 0 2px rgba(10, 10, 14, 0.85), 0 0 0 3px rgba(255, 217, 122, 0.3);
+  padding: 10px 22px;
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.15s steps(3), transform 0.15s steps(3);
+  pointer-events: none;
+  white-space: nowrap;
+}
+#teleport-tip.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+#teleport-tip kbd {
+  display: inline-block;
+  background: #ffd97a;
+  color: #201a08;
+  border-radius: 0;
+  padding: 1px 7px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 3px;
+}
+
+/* ---- 线索发现提示 ---- */
+#clue-toast {
+  position: fixed;
+  left: 50%; bottom: 110px;
+  transform: translateX(-50%) translateY(10px);
+  color: #e8e4d8;
+  background: rgba(10, 10, 14, 0.85);
+  border: 1px solid rgba(255, 217, 122, 0.55);
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 15px;
+  letter-spacing: 2px;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+#clue-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+#clue-toast b { color: #ffd97a; }
+
+/* ---- 线索热点：光晕层（画在地图坐标上，随舞台缩放） ---- */
+#glow {
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ---- 线索热点：按 F 提示 ---- */
+#clue-hint {
+  position: fixed;
+  left: 50%; bottom: 110px;
+  transform: translateX(-50%) translateY(10px);
+  color: #e8e4d8;
+  background: rgba(10, 10, 14, 0.85);
+  border: 1px solid rgba(255, 217, 122, 0.55);
+  border-radius: 0;
+  box-shadow: 0 0 0 2px rgba(10, 10, 14, 0.85), 0 0 0 3px rgba(255, 217, 122, 0.3);
+  padding: 10px 22px;
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.15s steps(3), transform 0.15s steps(3);
+  pointer-events: none;
+  white-space: nowrap;
+}
+#clue-hint.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+#clue-hint kbd {
+  display: inline-block;
+  background: #ffd97a;
+  color: #201a08;
+  border-radius: 0;
+  padding: 1px 7px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 3px;
+}
+
+/* ---- 线索对话框（像素风） ---- */
+#clue-dialog {
+  position: fixed;
+  left: 50%; bottom: 48px;
+  transform: translateX(-50%);
+  width: min(680px, 92vw);
+  background: #10101a;
+  border: 3px solid #e8e4d8;
+  box-shadow: 0 0 0 3px #0a0a0c, 0 0 0 5px rgba(255, 217, 122, 0.55),
+              0 16px 44px rgba(0, 0, 0, 0.65);
+  padding: 20px 26px 24px;
+  display: none;
+  z-index: 45;
+  image-rendering: pixelated;
+}
+#clue-dialog.show {
+  display: block;
+  animation: cdPop 0.16s steps(4);
+}
+@keyframes cdPop {
+  from { opacity: 0; transform: translateX(-50%) translateY(14px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+#clue-dialog .cd-title {
+  color: #ffd97a;
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  font-size: 24px;
+  letter-spacing: 4px;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+  border-bottom: 2px dashed rgba(232, 228, 216, 0.3);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+#clue-dialog .cd-text {
+  color: #e8e4d8;
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  font-size: 14px;
+  line-height: 2.4;
+  letter-spacing: 2px;
+  white-space: pre-line;
+  min-height: 120px;
+  max-height: 52vh;
+  overflow-y: auto;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+}
+#clue-dialog .cd-text::-webkit-scrollbar {
+  width: 8px;
+}
+#clue-dialog .cd-text::-webkit-scrollbar-thumb {
+  background: rgba(255, 217, 122, 0.4);
+}
+#clue-dialog .cd-text::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+}
+#clue-dialog .cd-more {
+  position: absolute;
+  right: 18px; bottom: 10px;
+  color: #ffd97a;
+  font-size: 12px;
+  display: none;
+}
+#clue-dialog .cd-more.show { display: block; }
+#clue-dialog .cd-count {
+  margin-right: 8px;
+  color: rgba(232, 228, 216, 0.75);
+}
+
+/* ---- 物品栏开关（菜单按钮左侧，仅第一组，背包图标） ---- */
+#inv-btn {
+  position: fixed;
+  right: 66px; top: 12px;
+  width: 42px; height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e8e4d8;
+  background: rgba(10, 10, 14, 0.72);
+  border: 1px solid rgba(232, 228, 216, 0.25);
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 30;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+#inv-btn:hover {
+  border-color: rgba(255, 217, 122, 0.7);
+  color: #ffd97a;
+}
+#inv-btn svg { display: block; }
+
+/* ---- 物品栏面板：摊开的书（左页 2x3 缩略图翻页，右页详情） ---- */
+#inv-panel {
+  position: fixed;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(5, 5, 8, 0.6);
+  backdrop-filter: blur(3px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;   /* 与菜单一致：高于线索对话框等弹层 */
+  animation: pmFade 0.18s ease;
+}
+#inv-panel.show { display: flex; }
+#inv-panel .ip-book {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(880px, 93vw);
+  min-height: 500px;
+  background:
+    /* 像素颗粒：细小方格纸纹 */
+    repeating-conic-gradient(rgba(74, 53, 32, 0.045) 0% 25%, rgba(74, 53, 32, 0) 0% 50%) 0 0 / 8px 8px,
+    /* 像素横纹：1px 阶梯条纹 */
+    repeating-linear-gradient(180deg, rgba(74, 53, 32, 0.05) 0 1px, rgba(74, 53, 32, 0) 1px 6px),
+    /* 中缝阴影 */
+    linear-gradient(90deg, rgba(74, 53, 32, 0) 46%, rgba(74, 53, 32, 0.18) 49.6%,
+      rgba(59, 41, 20, 0.3) 50%, rgba(74, 53, 32, 0.18) 50.4%, rgba(74, 53, 32, 0) 54%),
+    linear-gradient(180deg, #f2e6c6 0%, #ead9b0 55%, #e0cf9f 100%);
+  /* 像素风边缘：切角阶梯 + 内描边，外阴影用 drop-shadow 跟随切角形状 */
+  clip-path: polygon(
+    0 10px, 5px 10px, 5px 5px, 10px 5px, 10px 0,
+    calc(100% - 10px) 0, calc(100% - 10px) 5px, calc(100% - 5px) 5px, calc(100% - 5px) 10px, 100% 10px,
+    100% calc(100% - 10px), calc(100% - 5px) calc(100% - 10px), calc(100% - 5px) calc(100% - 5px), calc(100% - 10px) calc(100% - 5px), calc(100% - 10px) 100%,
+    10px 100%, 10px calc(100% - 5px), 5px calc(100% - 5px), 5px calc(100% - 10px), 0 calc(100% - 10px)
+  );
+  box-shadow: inset 0 0 0 3px #8a6437, inset 0 0 46px rgba(74, 53, 32, 0.12);
+  filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.7));
+  padding: 20px 26px 22px;
+  animation: ipOpen 0.26s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+@keyframes ipOpen {
+  from { opacity: 0; transform: scaleX(0.6); }
+  to   { opacity: 1; transform: scaleX(1); }
+}
+#inv-panel .ip-booktitle {
+  text-align: center;
+  color: #4a3520;
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  font-size: 20px;
+  letter-spacing: 8px;
+  text-indent: 8px;
+  margin-bottom: 14px;
+}
+#inv-panel .ip-pages { flex: 1; display: flex; min-height: 0; }
+#inv-panel .ip-page { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 0 26px; }
+#inv-panel .ip-page-right { border-left: 2px dashed rgba(74, 53, 32, 0.25); }
+
+/* 左页：缩略图 3 行 x 2 列 */
+#inv-panel .ip-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 10px 16px;
+  align-content: start;
+}
+#inv-panel .ip-empty {
+  grid-column: 1 / -1;
+  align-self: center;
+  justify-self: center;
+  color: rgba(74, 53, 32, 0.5);
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  font-size: 15px;
+  letter-spacing: 2px;
+}
+#inv-panel .ip-cell {
+  text-align: center;
+  cursor: pointer;
+  padding: 4px 2px;
+  border-radius: 8px;
+  transition: transform 0.15s ease;
+}
+#inv-panel .ip-cell:hover { transform: translateY(-2px); }
+#inv-panel .ip-cell img {
+  width: 96px; height: 96px;
+  image-rendering: pixelated;
+  border: 2px solid rgba(74, 53, 32, 0.4);
+  border-radius: 0;
+  background: rgba(255, 253, 244, 0.55);
+  pointer-events: none;
+}
+#inv-panel .ip-cell:hover img { border-color: #8a5a1e; }
+#inv-panel .ip-cell.sel img {
+  border-color: #8a5a1e;
+  background: #fff8e2;
+  box-shadow: 0 0 0 2px rgba(138, 90, 30, 0.35);
+}
+#inv-panel .ip-cell .ip-name {
+  margin-top: 5px;
+  color: #4a3520;
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+#inv-panel .ip-cell.fresh { animation: ipPop 0.35s cubic-bezier(0.34, 1.5, 0.64, 1); }
+@keyframes ipPop {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+/* 翻页器 */
+#inv-panel .ip-pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 10px;
+  min-height: 22px;
+}
+#inv-panel .ip-pgbtn {
+  cursor: pointer;
+  color: #4a3520;
+  font-size: 14px;
+  user-select: none;
+  padding: 0 6px;
+}
+#inv-panel .ip-pgbtn:hover { color: #8a5a1e; }
+#inv-panel .ip-pglabel {
+  color: rgba(74, 53, 32, 0.75);
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+/* 物品图容器 + 缺图占位块（图片 onerror 隐藏后露出） */
+#inv-panel .ip-imgwrap {
+  position: relative;
+  display: inline-block;
+  width: 96px; height: 96px;
+}
+#inv-panel .ip-imgwrap img { display: block; }
+#inv-panel .ip-imgwrap .it-fb {
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  color: rgba(74, 53, 32, 0.65);
+  background: rgba(255, 253, 244, 0.55);
+  pointer-events: none;
+  box-sizing: border-box;
+}
+#inv-panel .ip-cell .it-fb {
+  font-size: 48px;
+  border: 2px solid rgba(74, 53, 32, 0.4);
+}
+#inv-panel .d-imgwrap { width: 168px; height: 168px; align-self: center; flex: none; }
+#inv-panel .d-imgwrap .it-fb {
+  font-size: 72px;
+  border: 2px solid rgba(74, 53, 32, 0.45);
+}
+
+/* 右页：物品详情 */
+#inv-panel .ip-hint {
+  margin: auto;
+  color: rgba(74, 53, 32, 0.5);
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  font-size: 15px;
+  letter-spacing: 2px;
+  line-height: 2.2;
+  white-space: pre-line;
+  text-align: center;
+}
+#inv-panel .d-img {
+  width: 168px; height: 168px;
+  image-rendering: pixelated;
+  border: 2px solid rgba(74, 53, 32, 0.45);
+  border-radius: 8px;
+  background: rgba(255, 253, 244, 0.55);
+  align-self: center;
+  flex: none;
+}
+#inv-panel .d-name {
+  text-align: center;
+  color: #4a3520;
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  font-size: 15px;
+  letter-spacing: 4px;
+  margin-top: 12px;
+}
+#inv-panel .d-desc {
+  color: #4a3520;
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  font-size: 15px;
+  line-height: 2.1;
+  letter-spacing: 1px;
+  white-space: pre-line;
+  margin-top: 10px;
+  overflow-y: auto;
+}
+
+/* ---- 获得物品提示（顶部居中） ---- */
+#item-toast {
+  position: fixed;
+  left: 50%; top: 62px;
+  transform: translateX(-50%) translateY(-10px);
+  color: #e8e4d8;
+  background: rgba(10, 10, 14, 0.85);
+  border: 1px solid rgba(255, 217, 122, 0.55);
+  border-radius: 0;
+  box-shadow: 0 0 0 2px rgba(10, 10, 14, 0.85), 0 0 0 3px rgba(255, 217, 122, 0.3);
+  padding: 10px 22px;
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.15s steps(3), transform 0.15s steps(3);
+  pointer-events: none;
+  white-space: nowrap;
+}
+#item-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+#item-toast b { color: #ffd97a; }
+
+/* ---- 物品栏指引：进入 RPG 第一句时指向 #inv-btn，3 秒自动消失（像素风） ---- */
+#inv-hint {
+  position: fixed;
+  top: 68px;                 /* 物品栏按钮（top:12px + 高42px）正下方 */
+  right: 16px;
+  padding: 9px 14px;
+  font-family: "Zpix", "Microsoft YaHei", monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #e8e4d8;
+  background: rgba(10, 10, 14, 0.85);
+  border: 1px solid rgba(255, 217, 122, 0.55);
+  box-shadow: 0 0 0 2px rgba(10, 10, 14, 0.85), 0 0 0 3px rgba(255, 217, 122, 0.3);
+  white-space: nowrap;
+  z-index: 30;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.18s steps(3), transform 0.18s steps(3);
+  pointer-events: none;
+}
+#inv-hint.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* 像素小箭头：指向右上角的物品栏按钮 */
+#inv-hint .ih-arrow {
+  position: absolute;
+  top: -5px;
+  right: 66px;               /* 对准按钮中心（right:66px+21px 处） */
+  width: 8px; height: 8px;
+  background: rgba(10, 10, 14, 0.85);
+  border-top: 1px solid rgba(255, 217, 122, 0.55);
+  border-left: 1px solid rgba(255, 217, 122, 0.55);
+  transform: rotate(45deg);
+}
+/* 第二组：冷灰蓝色调 */
+body.rpg-g2 #inv-hint {
+  border-color: rgba(150, 200, 235, 0.55);
+  box-shadow: 0 0 0 2px rgba(10, 12, 16, 0.85), 0 0 0 3px rgba(150, 200, 235, 0.3);
+}
+body.rpg-g2 #inv-hint .ih-arrow {
+  border-top-color: rgba(150, 200, 235, 0.55);
+  border-left-color: rgba(150, 200, 235, 0.55);
+}
+
+/* ---- 右上角菜单开关 ---- */
+#menu-btn {
+  position: fixed;
+  right: 16px; top: 12px;
+  width: 42px; height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+  color: #e8e4d8;
+  background: rgba(10, 10, 14, 0.72);
+  border: 1px solid rgba(232, 228, 216, 0.25);
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 30;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+#menu-btn:hover {
+  border-color: rgba(255, 217, 122, 0.7);
+  color: #ffd97a;
+}
+
+/* ---- 菜单弹框 ---- */
+#pause-menu {
+  position: fixed;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(5, 5, 8, 0.6);
+  backdrop-filter: blur(3px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;   /* 高于 #clue-dialog/#hud(45) 等所有弹层，菜单永远在最上方 */
+  animation: pmFade 0.18s ease;
+}
+#pause-menu.show { display: flex; }
+@keyframes pmFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+#pause-menu .pm-box {
+  width: 300px;
+  padding: 30px 30px 26px;
+  background: linear-gradient(165deg, #1e1e29 0%, #13131b 55%, #0d0d13 100%);
+  border: 1px solid rgba(255, 217, 122, 0.4);
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 0, 0, 0.55),
+              inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  animation: pmPop 0.24s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+@keyframes pmPop {
+  from { opacity: 0; transform: translateY(16px) scale(0.93); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+#pause-menu .pm-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #ffd97a;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 6px;
+  text-indent: 6px; /* 抵消末字符字距，视觉居中 */
+  margin-bottom: 18px;
+  text-shadow: 0 0 18px rgba(255, 217, 122, 0.35);
+}
+#pause-menu .pm-title::before,
+#pause-menu .pm-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 217, 122, 0.55));
+}
+#pause-menu .pm-title::after {
+  background: linear-gradient(90deg, rgba(255, 217, 122, 0.55), transparent);
+}
+#pause-menu .pm-item {
+  position: relative;
+  margin-top: 12px;
+  padding: 12px 40px 12px 44px;
+  text-align: center;
+  color: #e8e4d8;
+  font-size: 15px;
+  letter-spacing: 3px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(232, 228, 216, 0.14);
+  border-radius: 10px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+#pause-menu .pm-item::before {
+  content: "◈";
+  position: absolute;
+  left: 18px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  color: rgba(255, 217, 122, 0.45);
+  transition: color 0.15s ease;
+}
+#pause-menu .pm-item::after {
+  content: "»";
+  position: absolute;
+  right: 14px; top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  color: #ffd97a;
+  transition: opacity 0.15s ease, right 0.15s ease;
+}
+#pause-menu .pm-item:hover {
+  background: linear-gradient(90deg, rgba(255, 217, 122, 0.16), rgba(255, 217, 122, 0.04));
+  border-color: rgba(255, 217, 122, 0.75);
+  color: #ffd97a;
+  transform: translateX(3px);
+}
+#pause-menu .pm-item:hover::before { color: #ffd97a; }
+#pause-menu .pm-item:hover::after  { opacity: 1; right: 10px; }
+
+/* ============================================================
+   第二组（院子/办公室）冷灰蓝色调皮肤 —— 像素风不变，只换色
+   accent: #a9d2ee (150,200,235) / ink: #2c3a46 / steel: #5f7a90
+   ============================================================ */
+
+/* ---- F 提示 / 传送提示 ---- */
+body.rpg-g2 #clue-hint,
+body.rpg-g2 #teleport-tip {
+  border-color: rgba(150, 200, 235, 0.55);
+  box-shadow: 0 0 0 2px rgba(10, 12, 16, 0.85), 0 0 0 3px rgba(150, 200, 235, 0.3);
+}
+body.rpg-g2 #clue-hint kbd,
+body.rpg-g2 #teleport-tip kbd {
+  background: #a9d2ee;
+  color: #0e1a24;
+}
+
+/* ---- 线索对话框 ---- */
+body.rpg-g2 #clue-dialog {
+  border-color: #d7e2ec;
+  box-shadow: 0 0 0 3px #0a0c10, 0 0 0 5px rgba(150, 200, 235, 0.55),
+              0 16px 44px rgba(0, 0, 0, 0.65);
+}
+body.rpg-g2 #clue-dialog .cd-title {
+  color: #a9d2ee;
+  border-bottom-color: rgba(215, 226, 236, 0.3);
+}
+body.rpg-g2 #clue-dialog .cd-text::-webkit-scrollbar-thumb {
+  background: rgba(150, 200, 235, 0.4);
+}
+body.rpg-g2 #clue-dialog .cd-more { color: #a9d2ee; }
+/* 无标题模式（开场对话等）：隐藏标题栏，文字直接顶上 */
+#clue-dialog.no-title .cd-title { display: none; }
+/* 加大字号模式（开场两句话、全线索完成提示） */
+#clue-dialog.big-text .cd-text {
+  font-size: 18px;
+  line-height: 2.2;
+  min-height: 100px;
+}
+
+/* ---- 获得物品提示 ---- */
+body.rpg-g2 #item-toast {
+  border-color: rgba(150, 200, 235, 0.55);
+  box-shadow: 0 0 0 2px rgba(10, 12, 16, 0.85), 0 0 0 3px rgba(150, 200, 235, 0.3);
+}
+body.rpg-g2 #item-toast b { color: #a9d2ee; }
+
+/* ---- 物品栏开关 ---- */
+body.rpg-g2 #inv-btn:hover {
+  border-color: rgba(150, 200, 235, 0.7);
+  color: #a9d2ee;
+}
+
+/* ---- 顶部地名标识：第二组用白色 ---- */
+body.rpg-g2 #hud,
+body.rpg-g2 #hud b {
+  color: #ffffff;
+}
+
+/* ---- 菜单开关与弹框：第二组冷蓝 ---- */
+body.rpg-g2 #menu-btn:hover {
+  border-color: rgba(150, 200, 235, 0.7);
+  color: #a9d2ee;
+}
+body.rpg-g2 #pause-menu .pm-box {
+  border-color: rgba(150, 200, 235, 0.4);
+  background: linear-gradient(165deg, #1a2230 0%, #12161f 55%, #0c0f16 100%);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 0, 0, 0.55),
+              inset 0 1px 0 rgba(210, 230, 245, 0.05);
+}
+body.rpg-g2 #pause-menu .pm-title {
+  color: #a9d2ee;
+  text-shadow: 0 0 18px rgba(150, 200, 235, 0.35);
+}
+body.rpg-g2 #pause-menu .pm-title::before {
+  background: linear-gradient(90deg, transparent, rgba(150, 200, 235, 0.55));
+}
+body.rpg-g2 #pause-menu .pm-title::after {
+  background: linear-gradient(90deg, rgba(150, 200, 235, 0.55), transparent);
+}
+body.rpg-g2 #pause-menu .pm-item::before {
+  color: rgba(150, 200, 235, 0.45);
+}
+body.rpg-g2 #pause-menu .pm-item::after {
+  color: #a9d2ee;
+}
+body.rpg-g2 #pause-menu .pm-item:hover {
+  background: linear-gradient(90deg, rgba(150, 200, 235, 0.16), rgba(150, 200, 235, 0.04));
+  border-color: rgba(150, 200, 235, 0.75);
+  color: #a9d2ee;
+}
+body.rpg-g2 #pause-menu .pm-item:hover::before { color: #a9d2ee; }
+
+/* ---- 物品栏书页：冷调"蓝图纸张" ---- */
+body.rpg-g2 #inv-panel .ip-book {
+  background:
+    repeating-conic-gradient(rgba(44, 58, 70, 0.045) 0% 25%, rgba(44, 58, 70, 0) 0% 50%) 0 0 / 8px 8px,
+    repeating-linear-gradient(180deg, rgba(44, 58, 70, 0.05) 0 1px, rgba(44, 58, 70, 0) 1px 6px),
+    linear-gradient(90deg, rgba(44, 58, 70, 0) 46%, rgba(44, 58, 70, 0.18) 49.6%,
+      rgba(33, 44, 54, 0.3) 50%, rgba(44, 58, 70, 0.18) 50.4%, rgba(44, 58, 70, 0) 54%),
+    linear-gradient(180deg, #eef2f6 0%, #e2e9ef 55%, #d6dfe7 100%);
+  box-shadow: inset 0 0 0 3px #5f7a90, inset 0 0 46px rgba(44, 58, 70, 0.12);
+}
+body.rpg-g2 #inv-panel .ip-booktitle { color: #2c3a46; }
+body.rpg-g2 #inv-panel .ip-empty,
+body.rpg-g2 #inv-panel .ip-hint { color: rgba(44, 58, 70, 0.5); }
+body.rpg-g2 #inv-panel .ip-cell img,
+body.rpg-g2 #inv-panel .ip-imgwrap .it-fb {
+  border-color: rgba(44, 58, 70, 0.4);
+  background: rgba(255, 255, 255, 0.55);
+}
+body.rpg-g2 #inv-panel .ip-cell:hover img { border-color: #3f5a70; }
+body.rpg-g2 #inv-panel .ip-cell.sel img {
+  border-color: #3f5a70;
+  background: #f4f8fb;
+  box-shadow: 0 0 0 2px rgba(63, 90, 112, 0.35);
+}
+body.rpg-g2 #inv-panel .it-fb { color: rgba(44, 58, 70, 0.65); }
+body.rpg-g2 #inv-panel .ip-cell .ip-name,
+body.rpg-g2 #inv-panel .d-name,
+body.rpg-g2 #inv-panel .d-desc { color: #2c3a46; }
+body.rpg-g2 #inv-panel .ip-pgbtn { color: #2c3a46; }
+body.rpg-g2 #inv-panel .ip-pgbtn:hover { color: #3f5a70; }
+body.rpg-g2 #inv-panel .ip-pglabel { color: rgba(44, 58, 70, 0.75); }
+body.rpg-g2 #inv-panel .d-img {
+  border-color: rgba(44, 58, 70, 0.45);
+  background: rgba(255, 255, 255, 0.55);
+}

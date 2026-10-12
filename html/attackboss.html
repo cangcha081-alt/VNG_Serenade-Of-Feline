@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>黑猫小夜曲 · 迎击峰岸诚</title>
+	<link rel="icon" href="data:,">
+	<link rel="stylesheet" href="../css/attackboss.css">
+	<link rel="stylesheet" href="../css/achieve.css">
+</head>
+<body>
+
+<!--  主舞台  -->
+<div id="stage">
+
+	<!-- 背景层 -->
+	<div class="bg-layer"><img src="../images/background+.png" alt=""></div>
+	<div class="bg-vignette"></div>
+	<div class="bg-scan"></div>
+
+	<!-- 对手进攻预警：屏幕两侧亮起的光带（红＝斩击 / 黄＝突袭） -->
+	<div class="edge-glow left"  id="edgeGlowL"></div>
+	<div class="edge-glow right" id="edgeGlowR"></div>
+
+	<!--  顶部：血条 + 相框 + 回合数  -->
+	<div class="topbar">
+
+		<!-- 正方（左）：沙耶香 + 小黑 -->
+		<div class="fighter-panel side-left" id="panelPlayer">
+			<div class="portrait-frame">
+				<img class="portrait" id="portraitPlayer" src="../images/protac_pic.png" alt="正方相框">
+				<span class="portrait-ph">头像</span>
+			</div>
+			<div class="panel-info">
+				<div class="name-row">
+					<span class="f-name">沙耶香</span>
+					<span class="f-partner">＋ 小黑</span>
+				</div>
+				<div class="hpbar reverse" id="hpbarPlayer">
+					<div class="hp-lag" id="hpLagPlayer"></div>
+					<div class="hp-fill" id="hpFillPlayer"></div>
+					<div class="hp-gloss"></div>
+					<div class="hp-num"><span id="hpNumPlayer">100</span></div>
+				</div>
+			</div>
+		</div>
+
+		<!-- 中间：回合数 -->
+		<div class="round-box">
+			<div class="round-label">ROUND</div>
+			<div class="round-num" id="roundNum">1</div>
+			<div class="round-sub" id="roundSub">战斗开始</div>
+		</div>
+
+		<!-- 反方（右）：峰岸诚 -->
+		<div class="fighter-panel side-right" id="panelRival">
+			<div class="panel-info">
+				<div class="name-row right">
+					<span class="f-partner">BOSS</span>
+					<span class="f-name">峰岸诚</span>
+				</div>
+				<div class="hpbar" id="hpbarRival">
+					<div class="hp-lag" id="hpLagRival"></div>
+					<div class="hp-fill" id="hpFillRival"></div>
+					<div class="hp-gloss"></div>
+					<div class="hp-num"><span id="hpNumRival">100</span></div>
+				</div>
+			</div>
+			<div class="portrait-frame rival">
+				<img class="portrait" id="portraitRival" src="../images/rival_pic.png" alt="反方相框">
+				<span class="portrait-ph">头像</span>
+			</div>
+		</div>
+
+	</div>
+
+	<!--  回合提示横幅  -->
+	<div class="turn-banner" id="turnBanner">
+		<span class="turn-text" id="turnText">轮到己方攻击</span>
+	</div>
+
+	<!--  战斗区：cat · protag  vs  rival  -->
+	<div class="arena" id="arena">
+
+		<!-- 最左：小黑 -->
+		<div class="unit unit-cat" id="unitCat" data-cx="0.526">
+			<div class="shield cat" id="shieldCat"></div>
+			<img class="sprite s-idle on" src="../images/the_cat.png" alt="小黑">
+			<img class="sprite s-defense" src="../images/s-defense.png" alt="小黑">
+			<div class="shadow"></div>
+		</div>
+
+		<!-- 接着：沙耶香（主角） -->
+		<div class="unit unit-protag" id="unitProtag" data-cx="0.500">
+			<div class="shield" id="shieldProtag"></div>
+			<img class="sprite s-idle on" src="../images/the_protag.png" alt="沙耶香">
+			<img class="sprite s-attack" src="../images/the_protag_attack.png" alt="沙耶香·攻击">
+			<img class="sprite s-defense" src="../images/the_protag_defense.png" alt="沙耶香·防御">
+			<div class="shadow"></div>
+		</div>
+
+		<!-- 最右：峰岸诚 -->
+		<div class="unit unit-rival" id="unitRival" data-cx="0.512">
+			<img class="sprite s-idle on" src="../images/the_rival.png" alt="峰岸诚">
+			<img class="sprite s-attack" src="../images/the_rival_attack.png" alt="峰岸诚·攻击">
+			<img class="sprite s-attack2" src="../images/rival_attack2.png" alt="峰岸诚·突袭">
+			<img class="sprite s-fail" src="../images/the_rival_fail.png" alt="峰岸诚·败北">
+			<div class="shadow"></div>
+		</div>
+
+		<!-- 打击特效层 -->
+		<div class="fx-layer" id="fxLayer"></div>
+	</div>
+
+	<!--  QTE 提示层  -->
+	<div class="qte-layer" id="qteLayer"></div>
+
+	<!-- 判定文字 -->
+	<div class="judge-text" id="judgeText"></div>
+
+	<!-- 连击提示 -->
+	<div class="combo-box" id="comboBox">
+		<span class="combo-num" id="comboNum">0</span>
+		<span class="combo-word">COMBO</span>
+	</div>
+
+	<!--  开场遮罩  -->
+	<div class="overlay show" id="startOverlay">
+		<div class="panel">
+			<div class="panel-title">决战</div>
+			<div class="panel-sub">沙耶香 与 小黑 的联手一击</div>
+
+			<div class="rule-box">
+				<div class="rule"><b class="k atk">己方进攻</b>：屏幕浮现 <b>鼠标左键 / J / K / I / L</b>，由沙耶香及时按下削减对手血量</div>
+				<div class="rule"><b class="k def">对手斩击</b>：屏幕两侧泛起 <b class="c-red">红光</b>，按下浮现的 <b>W / A / S / D</b> 招架</div>
+				<div class="rule"><b class="k cat">对手突袭</b>：屏幕两侧泛起 <b class="c-gold">黄光</b>，按下 <b>Space</b> 切刀换上小黑防御</div>
+			</div>
+
+			<button class="btn btn-primary" id="startBtn" type="button">开 始 战 斗</button>
+			<div class="panel-foot">按 <b>Space</b> 键开始</div>
+		</div>
+	</div>
+
+	<!--  结算遮罩  -->
+	<div class="overlay" id="resultOverlay">
+		<div class="panel" id="resultPanel">
+			<div class="result-badge" id="resultBadge">✓</div>
+			<div class="panel-title" id="resultTitle">战斗胜利</div>
+			<div class="panel-sub" id="resultSub">峰岸诚 被击退了</div>
+			<div class="stats">
+				<div class="stat">
+					<div class="stat-label">历经回合</div>
+					<div class="stat-value" id="statRound">0</div>
+				</div>
+				<div class="stat">
+					<div class="stat-label">完美判定</div>
+					<div class="stat-value" id="statPerfect">0</div>
+				</div>
+			<div class="stat">
+				<div class="stat-label">成功格挡</div>
+				<div class="stat-value" id="statBlock">0</div>
+			</div>
+			<div class="stat">
+				<div class="stat-label">小黑接替</div>
+				<div class="stat-value" id="statCat">0</div>
+			</div>
+			<div class="stat hl">
+				<div class="stat-label">最大连击</div>
+				<div class="stat-value" id="statMaxCombo">0</div>
+			</div>
+			</div>
+			<div class="btn-group">
+				<button class="btn btn-primary" id="restartBtn" type="button">再来一局</button>
+				<a class="btn btn-ghost" id="homeBtn" href="hall.html">返回大厅</a>
+			</div>
+		</div>
+	</div>
+
+</div>
+
+	<!-- 右下角设置入口 -->
+	<a class="settings-btn" id="settingsBtn" href="settingPage.html" aria-label="设置" title="设置">
+		<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+			<path fill="currentColor" d="M19.14 12.94a7.5 7.5 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.5 7.5 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.43h-3.84a.5.5 0 0 0-.5.43l-.36 2.54a7.5 7.5 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.65 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.5 7.5 0 0 0 0 1.88L2.77 14.52a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.5 1.05.92 1.63.94l.36 2.54a.5.5 0 0 0 .5.43h3.84a.5.5 0 0 0 .5-.43l.36-2.54a7.5 7.5 0 0 0 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5z"/>
+		</svg>
+	</a>
+
+<!--分账号进度隔离：先引 userStore.js，本页据此把 u:<用户>:vn_save_auto 也算作返回点候选-->
+<script src="../js/userStore.js"></script>
+<script src="../js/achieve.js"></script>
+<script src="../js/attackboss.js"></script>
+<!--背景音乐：天台决战（循环；音量沿用游戏内设置，离开页面自动淡出）-->
+<script>window.PAGE_BGM = { src: '../音乐/天台决战.mp3', loop: true };</script>
+<script src="../js/pageBgm.js"></script>
+  <!-- 全屏设置：与设置页（外壳）联动，跨页保持全屏 -->
+  <script src="../js/fullscreenPref.js"></script>
+</body>
+</html>

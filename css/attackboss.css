@@ -1,0 +1,1248 @@
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	background: #05060d;
+	font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+	touch-action: none;
+}
+
+/* 
+   舞台与背景
+    */
+#stage {
+	position: fixed;
+	inset: 0;
+	overflow: hidden;
+	cursor: crosshair;
+}
+
+.bg-layer {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+}
+.bg-layer img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center 60%;
+	filter: saturate(0.82) brightness(0.62) contrast(1.08);
+	animation: bgBreath 14s ease-in-out infinite;
+}
+@keyframes bgBreath {
+	0%, 100% { transform: scale(1.02); }
+	50%      { transform: scale(1.06); }
+}
+
+/* 暗角 */
+.bg-vignette {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	pointer-events: none;
+	background:
+		radial-gradient(ellipse 78% 68% at 50% 46%, transparent 32%, rgba(4, 6, 16, 0.62) 78%, rgba(2, 3, 10, 0.92) 100%),
+		linear-gradient(to bottom, rgba(6, 10, 26, 0.72) 0%, transparent 22%, transparent 74%, rgba(3, 5, 14, 0.7) 100%);
+}
+
+/* 扫描线 */
+.bg-scan {
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	pointer-events: none;
+	opacity: 0.16;
+	background: repeating-linear-gradient(
+		to bottom,
+		rgba(255, 255, 255, 0.05) 0px,
+		rgba(255, 255, 255, 0.05) 1px,
+		transparent 1px,
+		transparent 3px
+	);
+}
+
+/* 
+   对手进攻预警：屏幕两侧的光带
+   红＝斩击（沙耶香 W/A/S/D 招架）／黄＝突袭（Space 切刀换小黑）
+   压在角色下层（z-index 5），免得挡住立绘；只在对手出手时亮起
+    */
+.edge-glow {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	width: 15vw;
+	z-index: 5;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.16s linear;
+	--glow: rgba(255, 46, 72, 0.6);          /* 主色 */
+	--glow-core: rgba(255, 120, 140, 0.95);  /* 贴边高光 */
+	background: linear-gradient(90deg, var(--glow) 0%, transparent 100%);
+	box-shadow: inset 3vh 0 6vh 2vh var(--glow);
+}
+.edge-glow.right {
+	left: auto;
+	right: 0;
+	background: linear-gradient(270deg, var(--glow) 0%, transparent 100%);
+	box-shadow: inset -3vh 0 6vh 2vh var(--glow);
+}
+/* 最外侧的亮线 */
+.edge-glow::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	width: 0.5vw;
+	background: linear-gradient(180deg, transparent 6%, var(--glow-core) 26%, #fff 50%, var(--glow-core) 74%, transparent 94%);
+	filter: blur(1px);
+}
+.edge-glow.right::after { left: auto; right: 0; }
+
+/* 两种进攻的颜色 */
+.edge-glow.red    { --glow: rgba(255, 40, 66, 0.62);  --glow-core: rgba(255, 130, 150, 0.95); }
+.edge-glow.yellow { --glow: rgba(255, 202, 54, 0.6);  --glow-core: rgba(255, 236, 150, 0.95); }
+
+.edge-glow.on { animation: edgePulse 0.6s ease-in-out infinite alternate; }
+@keyframes edgePulse {
+	0%   { opacity: 0.5; }
+	100% { opacity: 1; }
+}
+
+/* 
+   顶部 HUD：相框 + 血条 + 回合数
+    */
+.topbar {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 30;
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1.4vh;
+	padding: 1.6vh 2vw 0;
+	pointer-events: none;
+}
+
+.fighter-panel {
+	display: flex;
+	align-items: center;
+	gap: 0.9vw;
+	width: 34%;
+	min-width: 260px;
+}
+.fighter-panel.side-right {
+	flex-direction: row;
+	justify-content: flex-end;
+}
+
+/* 相框 */
+.portrait-frame {
+	position: relative;
+	width: 8.6vh;
+	height: 8.6vh;
+	flex: none;
+	border-radius: 6px;
+	background:
+		repeating-linear-gradient(45deg, rgba(120, 190, 255, 0.07) 0 6px, rgba(0, 0, 0, 0) 6px 12px),
+		linear-gradient(160deg, rgba(18, 34, 66, 0.9), rgba(8, 14, 32, 0.9));
+	border: 2px solid rgba(130, 205, 255, 0.55);
+	box-shadow: 0 0 14px rgba(70, 160, 255, 0.35), inset 0 0 14px rgba(60, 140, 255, 0.18);
+	overflow: hidden;
+	clip-path: polygon(0 0, 100% 0, 100% 88%, 88% 100%, 0 100%);
+}
+.portrait-frame.rival {
+	border-color: rgba(255, 130, 150, 0.6);
+	box-shadow: 0 0 14px rgba(255, 70, 100, 0.35), inset 0 0 14px rgba(255, 70, 100, 0.18);
+	clip-path: polygon(0 0, 100% 0, 100% 100%, 12% 100%, 0 88%);
+}
+.portrait-frame .portrait {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	z-index: 2;
+}
+.portrait-frame .portrait[src=""] { display: none; }
+.portrait-ph {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.35vh;
+	letter-spacing: 2px;
+	color: rgba(160, 210, 255, 0.5);
+	z-index: 1;
+}
+.portrait-frame.rival .portrait-ph { color: rgba(255, 170, 185, 0.55); }
+
+/* 名字与血条 */
+.panel-info { flex: 1; min-width: 0; }
+
+.name-row {
+	display: flex;
+	align-items: baseline;
+	gap: 0.5em;
+	margin-bottom: 0.5vh;
+	white-space: nowrap;
+}
+.name-row.right { justify-content: flex-end; }
+.name-row .f-name {
+	font-size: 2.1vh;
+	font-weight: 800;
+	letter-spacing: 2px;
+	color: #eaf6ff;
+	text-shadow: 0 0 10px rgba(90, 180, 255, 0.75), 0 2px 3px rgba(0, 0, 0, 0.8);
+}
+.fighter-panel.side-right .f-name {
+	color: #ffe9ee;
+	text-shadow: 0 0 10px rgba(255, 70, 100, 0.7), 0 2px 3px rgba(0, 0, 0, 0.8);
+}
+.name-row .f-tag,
+.name-row .f-partner {
+	font-size: 1.22vh;
+	letter-spacing: 1px;
+	color: rgba(180, 220, 255, 0.62);
+}
+.name-row .f-partner {
+	padding: 0.1em 0.5em;
+	border: 1px solid rgba(150, 210, 255, 0.4);
+	border-radius: 3px;
+	color: rgba(200, 235, 255, 0.8);
+}
+.fighter-panel.side-right .f-partner {
+	border-color: rgba(255, 130, 150, 0.5);
+	color: rgba(255, 200, 210, 0.9);
+}
+
+/* 血条：斜切街机风 */
+.hpbar {
+	position: relative;
+	height: 2.7vh;
+	min-height: 18px;
+	background: linear-gradient(#05070f, #0b1120);
+	border: 2px solid rgba(150, 215, 255, 0.5);
+	box-shadow: 0 3px 12px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(0, 0, 0, 0.8);
+	overflow: hidden;
+	clip-path: polygon(0 0, 100% 0, 100% 100%, 1.2vh 100%, 0 55%);
+}
+.fighter-panel.side-right .hpbar {
+	clip-path: polygon(0 0, 100% 0, 100% 55%, calc(100% - 1.2vh) 100%, 0 100%);
+	border-color: rgba(255, 140, 160, 0.5);
+}
+
+/* 延迟掉血条 */
+.hp-lag {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	background: linear-gradient(180deg, #fff3c4, #f0b64a 60%, #b9761d);
+	transition: width 0.55s cubic-bezier(.3, .8, .4, 1) 0.25s;
+	z-index: 1;
+}
+/* 实际血量 */
+.hp-fill {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	background: linear-gradient(180deg, #7dffc0 0%, #24d97a 45%, #0e9a52 100%);
+	transition: width 0.22s cubic-bezier(.25, .9, .35, 1);
+	z-index: 2;
+}
+.fighter-panel.side-right .hp-fill {
+	background: linear-gradient(180deg, #ff9aa8 0%, #f2395c 45%, #a0122f 100%);
+}
+
+/* 反向血条：正方血量从右往左掉 */
+.hpbar.reverse .hp-lag,
+.hpbar.reverse .hp-fill {
+	left: auto;
+	right: 0;
+}
+
+.hp-gloss {
+	position: absolute;
+	inset: 0;
+	z-index: 3;
+	pointer-events: none;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.05) 42%, rgba(0, 0, 0, 0.28) 100%);
+}
+.hp-num {
+	position: absolute;
+	right: 0.7em;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 4;
+	font-size: 1.5vh;
+	font-weight: 800;
+	color: #fff;
+	text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.9);
+	letter-spacing: 1px;
+}
+.hpbar.reverse .hp-num { right: auto; left: 0.7em; }
+
+/* 低血警告 */
+.hpbar.danger .hp-fill { animation: hpDanger 0.65s steps(2, end) infinite; }
+@keyframes hpDanger {
+	0%   { filter: brightness(1); }
+	100% { filter: brightness(1.85) saturate(1.5); }
+}
+
+/* 血条受击抖动 */
+.hpbar.shake { animation: hpShake 0.28s ease; }
+@keyframes hpShake {
+	0%, 100% { transform: translate(0, 0); }
+	25%      { transform: translate(-4px, 1px); }
+	50%      { transform: translate(3px, -1px); }
+	75%      { transform: translate(-2px, 0); }
+}
+
+/* 中间回合数 */
+.round-box {
+	flex: none;
+	text-align: center;
+	padding: 0.5vh 1.1vw 0.7vh;
+	border-radius: 4px;
+	background: linear-gradient(180deg, rgba(10, 20, 44, 0.86), rgba(6, 12, 28, 0.7));
+	border: 1px solid rgba(130, 200, 255, 0.4);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55), inset 0 0 14px rgba(70, 150, 255, 0.15);
+	backdrop-filter: blur(5px);
+	clip-path: polygon(8% 0, 92% 0, 100% 100%, 0 100%);
+	min-width: 118px;
+}
+.round-label {
+	font-size: 1.15vh;
+	letter-spacing: 4px;
+	color: rgba(160, 210, 255, 0.75);
+}
+.round-num {
+	font-size: 4.2vh;
+	line-height: 1.02;
+	font-weight: 900;
+	color: #fff;
+	text-shadow: 0 0 14px rgba(110, 190, 255, 0.95), 0 2px 4px #000;
+	font-family: "Segoe UI", Impact, Arial Black, sans-serif;
+}
+.round-num.bump { animation: numBump 0.5s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes numBump {
+	0%   { transform: scale(1); }
+	40%  { transform: scale(1.55); }
+	100% { transform: scale(1); }
+}
+.round-sub {
+	font-size: 1.15vh;
+	letter-spacing: 1px;
+	color: rgba(200, 230, 255, 0.7);
+}
+
+/* 
+   回合提示横幅
+    */
+.turn-banner {
+	position: absolute;
+	top: 30%;
+	left: 0;
+	right: 0;
+	z-index: 40;
+	text-align: center;
+	pointer-events: none;
+	opacity: 0;
+}
+.turn-banner.show { animation: turnIn 1.5s cubic-bezier(.16, .9, .3, 1) forwards; }
+.turn-banner.show.foe { animation-name: turnInFoe; }
+.turn-text {
+	display: inline-block;
+	padding: 1vh 3.4vw;
+	font-size: 4.4vh;
+	font-weight: 900;
+	letter-spacing: 8px;
+	color: #fff;
+	background: linear-gradient(90deg, transparent, rgba(20, 90, 200, 0.55) 18%, rgba(40, 140, 255, 0.8) 50%, rgba(20, 90, 200, 0.55) 82%, transparent);
+	border-top: 2px solid rgba(180, 230, 255, 0.9);
+	border-bottom: 2px solid rgba(180, 230, 255, 0.9);
+	text-shadow: 0 0 18px rgba(120, 200, 255, 1), 0 3px 6px rgba(0, 0, 0, 0.9);
+	clip-path: polygon(4% 0, 96% 0, 100% 50%, 96% 100%, 4% 100%, 0 50%);
+}
+.turn-banner.foe .turn-text {
+	background: linear-gradient(90deg, transparent, rgba(150, 20, 50, 0.55) 18%, rgba(255, 60, 90, 0.82) 50%, rgba(150, 20, 50, 0.55) 82%, transparent);
+	border-color: rgba(255, 190, 200, 0.9);
+	text-shadow: 0 0 18px rgba(255, 80, 110, 1), 0 3px 6px rgba(0, 0, 0, 0.9);
+}
+@keyframes turnIn {
+	0%   { opacity: 0; transform: translateX(-14%) scale(0.86); }
+	18%  { opacity: 1; transform: translateX(0) scale(1); }
+	76%  { opacity: 1; transform: translateX(0) scale(1); }
+	100% { opacity: 0; transform: translateX(10%) scale(1.08); }
+}
+@keyframes turnInFoe {
+	0%   { opacity: 0; transform: translateX(14%) scale(0.86); }
+	18%  { opacity: 1; transform: translateX(0) scale(1); }
+	76%  { opacity: 1; transform: translateX(0) scale(1); }
+	100% { opacity: 0; transform: translateX(-10%) scale(1.08); }
+}
+
+/* 
+   战斗区与角色站位
+    */
+.arena {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 15vh;
+	bottom: 0;
+	z-index: 10;
+}
+
+/* 角色通用 */
+.unit {
+	position: absolute;
+	bottom: 4.5vh;
+	transition: transform 0.28s cubic-bezier(.2, .9, .3, 1), filter 0.18s;
+	transform-origin: 50% 100%;
+	will-change: transform;
+}
+/* 同一角色的多个形态图上下叠放，靠 .on 切换显示 */
+.unit .sprite {
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	height: 100%;
+	width: auto;
+	opacity: 0;
+	filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.65));
+	transition: opacity 0.07s linear;
+	pointer-events: none;
+}
+.unit .sprite.on { opacity: 1; }
+
+/* 小黑 */
+.unit-cat {
+	left: 2vw;
+	width: 54vh;              /* = 96vh × (1600/2848)，立绘实际显示宽度 */
+	height: 96vh;
+}
+.unit-cat .sprite {
+	filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.7)) brightness(1.05);
+}
+/* 猫身在图中仅占 62.08%，下移使其落地 */
+.unit-cat .s-idle { bottom: -36.4vh; }
+/* 小黑的防御立绘（s-defense.png）：
+   ★ 和待机图构图完全不同：the_cat.png 是 1600×2848 的大画布、猫只占中间一块
+     （可视 610×760 px），而 s-defense.png 是 834×576、猫体铺满整张图（可视 834×576 px）。
+     直接沿用 .unit .sprite 的 height:100%（96vh）会撑成待机姿势的 3.7 倍大。
+   ★ 尺寸按「视觉体量相当」来定，不是按等高：
+     待机可视 = 20.6vh 宽 × 25.6vh 高；s-defense 横构图（834/576），若等高则宽达 37vh，
+     看起来仍然比待机大一圈。所以要按面积对齐：
+     设防御立绘显示高度为 H，则 H × (H×1.4479) = 20.6 × 25.6  →  H ≈ 19.1vh → height = 19.1/96 ≈ 19.9%
+     内容底边贴图片下沿（bottom=1.0），所以 bottom: 0；
+     内容中心 x=0.4982，再右移 1.45vh 与待机图的 0.5259 对齐（data-cx 用的就是这个值）。
+   ——想让小黑更大/更小，只改 height 这一个百分比（1% ≈ 0.96vh）：
+       19.9% = 与待机视觉体量一致（当前）；26.7% = 与待机等高但明显更宽大。
+        改完 height 要同步两个锚点数（都 = 100 − height% ÷ 2）：
+        .shield.cat 的 top → 90%；attackboss.js 里的 CFG.CAT_BODY_Y → 0.90 */
+.unit-cat .s-defense {
+	height: 19.9%;
+	bottom: 0;
+	transform: translateX(calc(-50% + 1.45vh));
+}
+/* 投影横向对齐立绘内容（图中 x: 537~1147 / 1600） */
+.unit-cat .shadow { left: 33.56%; width: 38.13%; }
+
+/* 黄光预警时小黑待命高亮（提示此刻可以按 Space 切刀换它上场） */
+.unit-cat.ready .sprite {
+	filter: drop-shadow(0 0 18px rgba(255, 214, 90, 0.95)) brightness(1.16);
+}
+
+/* 小黑的防御动作：从左侧跃到沙耶香身前，张爪格挡，再退回原位
+   （时长要和 attackboss.js 里的 CFG.CAT_GUARD_MS 保持一致）
+   注意两点：
+   ① 选择器要写成 .unit.unit-cat.state-defense，才能盖过后面的 .unit.state-defense
+   ② z-index:3 —— 小黑在 HTML 里排在沙耶香前面，默认会被沙耶香盖住；
+      跳进她身前时必须抬到上层，否则只看得见半个猫。 */
+.unit.unit-cat.state-defense {
+	animation: catGuard 1.2s cubic-bezier(.25, .9, .3, 1);
+	z-index: 3;
+}
+/* 位移里不带 scale：一旦缩放，小黑就会在弹跳过程中忽大忽小 */
+@keyframes catGuard {
+	0%   { transform: translate(0, 0) rotate(0); }
+	14%  { transform: translate(1.4vw, -4.6vh) rotate(-4deg); }
+	28%  { transform: translate(4vw, -1.2vh) rotate(3deg); }
+	46%  { transform: translate(4vw, 0.5vh) rotate(-1.5deg); }
+	70%  { transform: translate(4vw, 0) rotate(0); }
+	86%  { transform: translate(1.8vw, -2.2vh) rotate(-2deg); }
+	100% { transform: translate(0, 0) rotate(0); }
+}
+
+/* 沙耶香（正方主角，小黑右侧） */
+.unit-protag {
+	left: 22vw;
+	width: 37vh;
+	height: 66vh;
+}
+/* 三张形态图各自缩放：
+   待机放大到 115%（人物本体 ≈57vh，与攻击姿态的视觉体量对调）、
+   攻击收回 96%，避免切换时人物忽大忽小或撑出画面。
+   想让待机更大/更小，只改下面三个百分比即可（同步改 bottom 值 = 内容底边距 × 图高）。 */
+.unit-protag .s-idle    { height: 115%; bottom: -1.92vh; }  /* 内容底 97.47% → 0.0253×75.9 */
+.unit-protag .s-attack  { height: 96%;  bottom: -3.40vh; }  /* 内容底 94.63% → 0.0537×63.4 */
+.unit-protag .s-defense { height: 86.4%; bottom: -3.06vh; }  /* 进攻尺寸的 90%：86.4% → 底边按比例上移 */
+/* 投影按放大后的待机立绘重新对齐（图中 x: 489~1112 / 1600） */
+.unit-protag .shadow { left: 27.6%; width: 44.9%; }
+
+/* 峰岸诚（最右） */
+.unit-rival {
+	right: 5vw;
+	width: 40.5vh;
+	height: 72vh;
+}
+.unit-rival .s-idle   { bottom: -0.33vh; }   /* 内容底 99.54% */
+.unit-rival .s-attack { bottom: -0.43vh; }   /* 内容底 99.40% */
+.unit-rival .s-fail   { bottom: -0.81vh; }   /* 内容底 98.88%，且人物只剩半高＝跪伏 */
+.unit-rival .s-fail {
+	filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.7)) brightness(0.7) saturate(0.5);
+}
+/* 峰岸诚的第二套进攻立绘（rival_attack2.png，黄光突袭时用）：
+   它是 1264×2121 的「紧凑裁切」——人物铺满整张图，不像另外三张是 1600×2848 的大画布，
+   所以不能沿用 .unit .sprite 默认的 height:100%（=72vh，会大一圈）。
+   换算式：让它的人物可视高度 = the_rival_attack.png 的 59.7vh（两者构图比例都是 0.595）
+     59.7 / 72 = 82.9%；内容底边贴图片下沿 → bottom: 0；
+     内容中心 x=0.4996，右移 0.5vh 与待机图的 0.5119 对齐。 */
+.unit-rival .s-attack2 {
+	height: 82.9%;
+	bottom: 0;
+	transform: translateX(calc(-50% + 0.5vh));
+}
+.unit-rival .shadow { left: 24.69%; width: 53.06%; }
+
+/* 地面投影：置于角色容器内，与立绘落地处对齐 */
+.unit .shadow {
+	position: absolute;
+	bottom: -1.1vh;
+	height: 3.2vh;
+	border-radius: 50%;
+	background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.28) 45%, transparent 72%);
+	filter: blur(3px);
+	z-index: 1;
+	pointer-events: none;
+}
+
+/* 角色状态 */
+
+/* 待机呼吸 */
+.unit.state-idle { animation: idleBreath 3.2s ease-in-out infinite; }
+@keyframes idleBreath {
+	0%, 100% { transform: translateY(0) scale(1); }
+	50%      { transform: translateY(-0.8vh) scale(1.006); }
+}
+
+/* 进攻：前冲 + 抖动 */
+.unit.state-attack { animation: atkLunge 0.46s cubic-bezier(.2, .9, .3, 1); }
+@keyframes atkLunge {
+	0%   { transform: translate(0, 0) scale(1); }
+	30%  { transform: translate(var(--lx, 5vw), -1.4vh) scale(1.06) skewX(-3deg); }
+	55%  { transform: translate(calc(var(--lx, 5vw) * 1.16), 0.4vh) scale(1.09) skewX(2deg); }
+	100% { transform: translate(0, 0) scale(1); }
+}
+.unit-protag.state-attack { --lx: 7vw; }
+.unit-rival.state-attack  { --lx: -7vw; }
+
+/* 防御：后撤 + 护盾 */
+.unit.state-defense { animation: defGuard 0.9s ease-out; }
+@keyframes defGuard {
+	0%   { transform: translate(0, 0) scale(1); }
+	22%  { transform: translate(-2.4vw, 0.8vh) scale(0.965) skewX(4deg); }
+	70%  { transform: translate(-2vw, 0.4vh) scale(0.97) skewX(2deg); }
+	100% { transform: translate(0, 0) scale(1); }
+}
+.unit-rival.state-defense { animation-name: defGuardR; }
+@keyframes defGuardR {
+	0%   { transform: translate(0, 0) scale(1); }
+	22%  { transform: translate(2.4vw, 0.8vh) scale(0.965) skewX(-4deg); }
+	70%  { transform: translate(2vw, 0.4vh) scale(0.97) skewX(-2deg); }
+	100% { transform: translate(0, 0) scale(1); }
+}
+
+/* 受击：后仰 + 红闪 */
+.unit.state-hurt { animation: hurtHit 0.42s ease-out; }
+@keyframes hurtHit {
+	0%   { transform: translate(0, 0); filter: none; }
+	20%  { transform: translate(var(--hx, -3vw), -1vh) skewX(-6deg); filter: brightness(2.6) saturate(0.2); }
+	45%  { transform: translate(calc(var(--hx, -3vw) * 0.55), 0.5vh) skewX(3deg); filter: brightness(1.8) saturate(0.5); }
+	70%  { transform: translate(calc(var(--hx, -3vw) * 0.2), 0) skewX(-1deg); filter: brightness(1.3); }
+	100% { transform: translate(0, 0); filter: none; }
+}
+.unit-rival.state-hurt  { --hx: 3.4vw; }
+.unit-protag.state-hurt { --hx: -3.4vw; }
+
+/* 被击退（Boss 清空血条时） */
+.unit.state-down { animation: downFall 1.1s cubic-bezier(.3, .7, .4, 1) forwards; }
+@keyframes downFall {
+	0%   { transform: translate(0, 0) rotate(0); opacity: 1; filter: none; }
+	25%  { transform: translate(4vw, -3vh) rotate(6deg); filter: brightness(2.4) saturate(0.2); }
+	100% { transform: translate(12vw, 6vh) rotate(58deg); opacity: 0.15; filter: brightness(0.5) blur(2px); }
+}
+
+/* 小黑倒在画面左侧（与沙耶香相反方向） */
+.unit.unit-cat.state-down { animation-name: downFallCat; }
+@keyframes downFallCat {
+	0%   { transform: translate(0, 0) rotate(0); opacity: 1; filter: none; }
+	25%  { transform: translate(-2.4vw, -2vh) rotate(-6deg); filter: brightness(2.2) saturate(0.2); }
+	100% { transform: translate(-7vw, 4vh) rotate(-46deg); opacity: 0.15; filter: brightness(0.5) blur(2px); }
+}
+
+/* 形态切换瞬间的提亮脉冲（只改 filter，不影响站位 transform） */
+.unit.form-pop { animation: formPop 0.32s ease-out; }
+@keyframes formPop {
+	0%   { filter: none; }
+	28%  { filter: brightness(1.32) saturate(1.12); }
+	100% { filter: none; }
+}
+
+/* 蓄力/对峙姿态：一次冲刺后保持前倾，直到本回合结束 */
+.unit.state-aggro { transform: translateX(var(--ax, 0)) skewX(var(--as, 0deg)); }
+.unit-protag { --ax: 2vw;  --as: -2deg; }
+.unit-rival  { --ax: -2vw; --as: 2deg; }
+
+/* 护盾光环 */
+.shield {
+	position: absolute;
+	left: 50%;
+	top: 42%;
+	width: 33vh;
+	height: 48vh;
+	transform: translate(-50%, -50%) scale(0.7);
+	border-radius: 50%;
+	border: 3px solid rgba(120, 220, 255, 0.9);
+	background: radial-gradient(ellipse at center, rgba(90, 200, 255, 0.3) 0%, rgba(60, 160, 255, 0.12) 55%, transparent 75%);
+	box-shadow: 0 0 30px rgba(90, 200, 255, 0.75), inset 0 0 40px rgba(120, 220, 255, 0.35);
+	opacity: 0;
+	pointer-events: none;
+	z-index: 3;
+}
+.shield.on { animation: shieldPop 0.85s ease-out; }
+@keyframes shieldPop {
+	0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.55); }
+	22%  { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+	70%  { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+	100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+/* 小黑的护盾：金色，套在猫身位置
+   （防御立绘 19.1vh 高、底边贴地 → 猫身在容器内 y 76.9vh~96vh，中心 86.45vh = 90%） */
+.shield.cat {
+	left: 52.6%;
+	top: 90%;
+	width: 32vh;
+	height: 24vh;
+	border-color: rgba(255, 226, 120, 0.95);
+	background: radial-gradient(ellipse at center, rgba(255, 214, 90, 0.34) 0%, rgba(255, 180, 40, 0.14) 55%, transparent 76%);
+	box-shadow: 0 0 34px rgba(255, 205, 70, 0.8), inset 0 0 40px rgba(255, 226, 140, 0.4);
+}
+
+/* 
+   打击特效
+    */
+.fx-layer {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 20;
+}
+
+.slash {
+	position: absolute;
+	width: 26vh;
+	height: 26vh;
+	transform: translate(-50%, -50%) rotate(-24deg);
+}
+.slash::before,
+.slash::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: 12%;
+	border-radius: 50%;
+	background: linear-gradient(90deg, transparent, #fff 20%, #cfefff 50%, #fff 80%, transparent);
+	box-shadow: 0 0 18px rgba(180, 235, 255, 0.95);
+	animation: slashGo 0.36s ease-out forwards;
+}
+.slash::after { top: 62%; animation-delay: 0.05s; }
+.slash::before { top: 26%; }
+@keyframes slashGo {
+	0%   { opacity: 0; transform: scaleX(0.2); }
+	35%  { opacity: 1; transform: scaleX(1.05); }
+	100% { opacity: 0; transform: scaleX(1.25); }
+}
+
+.impact {
+	position: absolute;
+	width: 30vh;
+	height: 30vh;
+	transform: translate(-50%, -50%);
+	border-radius: 50%;
+	border: 6px solid rgba(255, 245, 210, 0.95);
+	box-shadow: 0 0 40px rgba(255, 220, 140, 0.9), inset 0 0 30px rgba(255, 240, 190, 0.6);
+	animation: impactGo 0.42s cubic-bezier(.2, .9, .3, 1) forwards;
+}
+@keyframes impactGo {
+	0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(0deg); }
+	30%  { opacity: 1; transform: translate(-50%, -50%) scale(1.02) rotate(12deg); }
+	100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5) rotate(30deg); }
+}
+
+/* 主角发射的攻击弹道：由 --dx / --dy 决定飞行终点 */
+.projectile {
+	position: absolute;
+	width: 9vh;
+	height: 2.6vh;
+	transform: translate(-50%, -50%);
+	border-radius: 50%;
+	background: radial-gradient(ellipse at 30% 50%, #ffffff 0%, #bfe9ff 35%, #57b6ff 70%, rgba(60, 150, 255, 0) 100%);
+	box-shadow: 0 0 18px rgba(120, 210, 255, 0.95);
+	animation: projGo 0.34s cubic-bezier(.35, .1, .6, 1) forwards;
+}
+@keyframes projGo {
+	0%   { opacity: 0; transform: translate(-50%, -50%) translate(0, 0) scaleX(0.35); }
+	18%  { opacity: 1; }
+	100% { opacity: 1; transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scaleX(1.6); }
+}
+
+/* 败北形态：晃动后力竭下沉 */
+.unit.state-fail { animation: failShake 0.95s cubic-bezier(.2, .8, .3, 1) forwards; }
+@keyframes failShake {
+	0%   { transform: translate(0, 0) skewX(0); }
+	16%  { transform: translate(1.4vw, -1.2vh) skewX(4deg); }
+	32%  { transform: translate(-0.9vw, 0.6vh) skewX(-3deg); }
+	50%  { transform: translate(0.6vw, -0.3vh) skewX(2deg); }
+	70%  { transform: translate(-0.3vw, 0.2vh) skewX(-1deg); }
+	100% { transform: translate(0, 1.4vh) skewX(0); }
+}
+
+.blockfx {
+	position: absolute;
+	width: 24vh;
+	height: 24vh;
+	transform: translate(-50%, -50%);
+	border-radius: 50%;
+	border: 5px solid rgba(140, 225, 255, 0.95);
+	box-shadow: 0 0 34px rgba(90, 200, 255, 0.9);
+	animation: blockGo 0.5s ease-out forwards;
+}
+@keyframes blockGo {
+	0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+	35%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+	100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
+}
+
+/* 小黑格挡时的金色护盾 */
+.blockfx.gold {
+	border-color: rgba(255, 226, 130, 0.95);
+	box-shadow: 0 0 34px rgba(255, 205, 70, 0.9), inset 0 0 26px rgba(255, 226, 140, 0.5);
+}
+
+/* 小黑切刀冲刺的黄光残影 */
+.catflash {
+	position: absolute;
+	width: 30vh;
+	height: 26vh;
+	transform: translate(-50%, -50%);
+	border-radius: 50%;
+	background: radial-gradient(ellipse at center, rgba(255, 226, 120, 0.5) 0%, rgba(255, 190, 60, 0.18) 46%, transparent 74%);
+	animation: catFlashGo 0.55s ease-out forwards;
+}
+@keyframes catFlashGo {
+	0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.55); }
+	32%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+	100% { opacity: 0; transform: translate(-50%, -50%) scale(1.28); }
+}
+
+/* 猫爪格挡：三道金色爪痕 */
+.clawfx {
+	position: absolute;
+	width: 18vh;
+	height: 17vh;
+	transform: translate(-50%, -50%) rotate(-16deg);
+}
+.clawfx i {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 7%;
+	background: linear-gradient(180deg, transparent, #fffbe4 16%, #ffd85e 56%, transparent);
+	box-shadow: 0 0 18px rgba(255, 214, 94, 0.95);
+	transform-origin: 50% 100%;
+	animation: clawGo 0.44s ease-out forwards;
+}
+.clawfx i:nth-child(1) { left: 6%;  --cr: -16deg; animation-delay: 0s; }
+.clawfx i:nth-child(2) { left: 42%; --cr: -4deg;  animation-delay: 0.05s; }
+.clawfx i:nth-child(3) { left: 78%; --cr: 9deg;   animation-delay: 0.1s; }
+@keyframes clawGo {
+	0%   { opacity: 0; transform: scaleY(0.15) rotate(var(--cr, 0deg)); }
+	30%  { opacity: 1; transform: scaleY(1) rotate(var(--cr, 0deg)); }
+	75%  { opacity: 1; transform: scaleY(1.02) rotate(var(--cr, 0deg)); }
+	100% { opacity: 0; transform: scaleY(1.06) rotate(var(--cr, 0deg)); }
+}
+
+/* 全屏染色闪：对手出手／格挡瞬间的整屏光（红＝斩击 金＝突袭） */
+.tint {
+	position: absolute;
+	inset: 0;
+	z-index: 58;
+	pointer-events: none;
+	opacity: 0;
+}
+.tint.red  { background: radial-gradient(ellipse at 50% 50%, transparent 38%, rgba(255, 40, 70, 0.62) 100%); }
+.tint.gold { background: radial-gradient(ellipse at 50% 50%, transparent 38%, rgba(255, 200, 60, 0.58) 100%); }
+.tint.on { animation: tintGo 0.34s ease-out; }
+@keyframes tintGo {
+	0%   { opacity: 0.9; }
+	100% { opacity: 0; }
+}
+
+.dmgnum {
+	position: absolute;
+	transform: translate(-50%, -50%);
+	font-size: 5.2vh;
+	font-weight: 900;
+	color: #fff;
+	text-shadow: 0 0 14px rgba(255, 190, 60, 1), 0 3px 6px rgba(0, 0, 0, 0.9);
+	animation: dmgGo 0.9s cubic-bezier(.2, .9, .3, 1) forwards;
+}
+.dmgnum.heal { text-shadow: 0 0 14px rgba(90, 255, 170, 1), 0 3px 6px rgba(0, 0, 0, 0.9); }
+@keyframes dmgGo {
+	0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+	25%  { opacity: 1; transform: translate(-50%, -80%) scale(1.25); }
+	70%  { opacity: 1; transform: translate(-50%, -95%) scale(1); }
+	100% { opacity: 0; transform: translate(-50%, -140%) scale(0.9); }
+}
+
+/* 屏幕震动 */
+#stage.shake-s { animation: scrShakeS 0.18s ease; }
+#stage.shake-l { animation: scrShakeL 0.34s ease; }
+@keyframes scrShakeS {
+	0%, 100% { transform: translate(0, 0); }
+	25% { transform: translate(-5px, 3px); }
+	50% { transform: translate(4px, -2px); }
+	75% { transform: translate(-3px, -1px); }
+}
+@keyframes scrShakeL {
+	0%, 100% { transform: translate(0, 0); }
+	15% { transform: translate(-12px, 6px); }
+	30% { transform: translate(10px, -5px); }
+	45% { transform: translate(-8px, 4px); }
+	60% { transform: translate(6px, -3px); }
+	80% { transform: translate(-4px, 2px); }
+}
+
+/* 白色闪屏 */
+.flash {
+	position: absolute;
+	inset: 0;
+	z-index: 60;
+	background: #fff;
+	opacity: 0;
+	pointer-events: none;
+}
+.flash.on { animation: flashGo 0.3s ease-out; }
+@keyframes flashGo {
+	0%   { opacity: 0.72; }
+	100% { opacity: 0; }
+}
+
+/* 
+   QTE 提示圆圈
+    */
+.qte-layer {
+	position: absolute;
+	inset: 0;
+	z-index: 45;
+	pointer-events: none;
+}
+
+.qte {
+	position: absolute;
+	width: 10vh;
+	height: 10vh;
+	min-width: 62px;
+	min-height: 62px;
+	transform: translate(-50%, -50%);
+	color: var(--qc, #ffd85e);
+	animation: qteIn 0.22s cubic-bezier(.2, 1.5, .4, 1);
+}
+@keyframes qteIn {
+	0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+	100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* 倒计时环 */
+.qte .ring {
+	position: absolute;
+	inset: -0.9vh;
+	border-radius: 50%;
+	background: conic-gradient(var(--qc) calc(var(--p, 1) * 360deg), rgba(0, 0, 0, 0) 0);
+	-webkit-mask: radial-gradient(circle, transparent 0 61%, #000 62%);
+	mask: radial-gradient(circle, transparent 0 61%, #000 62%);
+	filter: drop-shadow(0 0 8px var(--qc));
+}
+
+/* 圆面 */
+.qte .disc {
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	border: 0.42vh solid var(--qc);
+	background: radial-gradient(circle at 40% 32%, rgba(255, 255, 255, 0.22), rgba(8, 16, 34, 0.86) 62%);
+	box-shadow: 0 0 22px var(--qc), inset 0 0 20px color-mix(in srgb, var(--qc) 45%, transparent);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* 按键文字 */
+.qte .key {
+	position: relative;
+	z-index: 2;
+	font-size: 3.6vh;
+	font-weight: 900;
+	letter-spacing: 1px;
+	color: #fff;
+	text-shadow: 0 0 12px var(--qc), 0 2px 4px rgba(0, 0, 0, 0.9);
+}
+.qte .key.small { font-size: 2.1vh; letter-spacing: 0; }
+.qte .key-sub {
+	position: absolute;
+	bottom: 16%;
+	left: 0;
+	right: 0;
+	text-align: center;
+	font-size: 1.25vh;
+	font-weight: 700;
+	letter-spacing: 2px;
+	color: var(--qc);
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* 收缩的内圈（剩余时间可视化） */
+.qte .core {
+	position: absolute;
+	border-radius: 50%;
+	background: var(--qc);
+	opacity: 0.55;
+	filter: blur(6px);
+}
+
+/* 判定结果 */
+.qte.hit { animation: qteHit 0.34s ease-out forwards; }
+@keyframes qteHit {
+	0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+	40%  { opacity: 1; transform: translate(-50%, -50%) scale(1.42); filter: brightness(2.2); }
+	100% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); }
+}
+.qte.miss { animation: qteMiss 0.4s ease-in forwards; }
+@keyframes qteMiss {
+	0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+	100% { opacity: 0; transform: translate(-50%, -50%) scale(0.55) rotate(18deg); filter: grayscale(1) brightness(0.6); }
+}
+
+/* 判定文字 */
+.judge-text {
+	position: absolute;
+	top: 46%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 46;
+	font-size: 3.4vh;
+	font-weight: 900;
+	letter-spacing: 6px;
+	pointer-events: none;
+	opacity: 0;
+	white-space: nowrap;
+}
+.judge-text.show { animation: judgeGo 0.62s cubic-bezier(.2, .9, .3, 1); }
+@keyframes judgeGo {
+	0%   { opacity: 0; transform: translate(-50%, -30%) scale(0.6); }
+	25%  { opacity: 1; transform: translate(-50%, -52%) scale(1.15); }
+	70%  { opacity: 1; transform: translate(-50%, -55%) scale(1); }
+	100% { opacity: 0; transform: translate(-50%, -78%) scale(0.95); }
+}
+
+/* 连击 */
+.combo-box {
+	position: absolute;
+	left: 6vw;
+	top: 34%;
+	z-index: 44;
+	display: flex;
+	align-items: baseline;
+	gap: 0.3vw;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.25s;
+}
+.combo-box.show { opacity: 1; }
+.combo-num {
+	font-size: 6vh;
+	font-weight: 900;
+	color: #fff;
+	font-style: italic;
+	text-shadow: 0 0 16px rgba(255, 200, 70, 1), 0 3px 6px rgba(0, 0, 0, 0.9);
+}
+.combo-word {
+	font-size: 1.8vh;
+	font-weight: 800;
+	letter-spacing: 3px;
+	color: #ffd85e;
+	text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9);
+}
+.combo-box.bump .combo-num { animation: numBump 0.34s cubic-bezier(.2, 1.6, .4, 1); }
+
+/* 右下角设置入口 */
+.settings-btn {
+	position: fixed;
+	right: 1.4vw;
+	bottom: 1.4vh;
+	z-index: 90;
+	width: 4.4vh;
+	height: 4.4vh;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: rgba(220, 240, 255, 0.85);
+	background: linear-gradient(160deg, rgba(20, 40, 75, 0.78), rgba(10, 18, 36, 0.88));
+	border: 1px solid rgba(140, 200, 255, 0.45);
+	border-radius: 50%;
+	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55), inset 0 0 12px rgba(80, 150, 230, 0.25);
+ text-decoration: none;
+	transition: color 0.18s, transform 0.18s, box-shadow 0.18s;
+}
+.settings-btn:hover {
+	color: #fff;
+	transform: translateY(-1px);
+	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7), 0 0 18px rgba(90, 180, 255, 0.55);
+}
+.settings-btn:active { transform: translateY(0); }
+
+/* 
+   遮罩与面板
+    */
+.overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 80;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: radial-gradient(ellipse at center, rgba(6, 12, 28, 0.82), rgba(2, 4, 12, 0.95));
+	backdrop-filter: blur(6px);
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.35s ease, visibility 0.35s;
+}
+.overlay.show { opacity: 1; visibility: visible; }
+
+.panel {
+	width: min(640px, 88vw);
+	padding: 4vh 3vw;
+	text-align: center;
+	border-radius: 10px;
+	background: linear-gradient(160deg, rgba(16, 30, 60, 0.95), rgba(8, 14, 32, 0.96));
+	border: 1px solid rgba(120, 195, 255, 0.4);
+	box-shadow: 0 18px 60px rgba(0, 0, 0, 0.7), inset 0 0 40px rgba(60, 140, 255, 0.12);
+}
+
+.panel-kicker {
+	font-size: 1.3vh;
+	letter-spacing: 6px;
+	color: rgba(150, 205, 255, 0.7);
+	margin-bottom: 0.8vh;
+}
+.panel-title {
+	font-size: 4vh;
+	font-weight: 900;
+	letter-spacing: 4px;
+	color: #eaf6ff;
+	text-shadow: 0 0 18px rgba(90, 180, 255, 0.8), 0 3px 6px rgba(0, 0, 0, 0.8);
+}
+.panel-sub {
+	margin-top: 0.8vh;
+	font-size: 1.6vh;
+	color: rgba(190, 220, 255, 0.75);
+	letter-spacing: 1px;
+}
+.panel-foot {
+	margin-top: 1.6vh;
+	font-size: 1.25vh;
+	color: rgba(160, 200, 245, 0.55);
+}
+
+.rule-box {
+	margin: 2.6vh auto 0;
+	padding: 1.8vh 1.4vw;
+	max-width: 520px;
+	border-radius: 8px;
+	background: rgba(6, 14, 32, 0.7);
+	border: 1px solid rgba(110, 180, 255, 0.22);
+	text-align: left;
+}
+.rule {
+	font-size: 1.45vh;
+	line-height: 2.1;
+	color: rgba(205, 228, 255, 0.82);
+}
+.rule .k {
+	display: inline-block;
+	min-width: 6.6em;
+	font-weight: 800;
+}
+.rule .k.atk { color: #7fd8ff; }   /* 己方进攻：沙耶香 */
+.rule .k.def { color: #ff7d92; }   /* 对手斩击：红光 · W A S D 招架 */
+.rule .k.cat { color: #ffd85e; }   /* 对手突袭：黄光 · Space 切刀换小黑 */
+.rule b.c-red  { color: #ff7d92; }
+.rule b.c-gold { color: #ffd85e; }
+.rule.grade {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5vh 0.8vw;
+	margin-top: 0.8vh;
+	padding-top: 1vh;
+	border-top: 1px dashed rgba(120, 180, 255, 0.24);
+}
+.rule.grade .g {
+	font-size: 1.25vh;
+	font-weight: 800;
+	padding: 0.15em 0.7em;
+	border-radius: 3px;
+}
+.g-perfect { color: #ffd85e; background: rgba(255, 216, 94, 0.14); border: 1px solid rgba(255, 216, 94, 0.5); }
+.g-great   { color: #5ee08a; background: rgba(94, 224, 138, 0.14); border: 1px solid rgba(94, 224, 138, 0.5); }
+.g-good    { color: #ff9b45; background: rgba(255, 155, 69, 0.14); border: 1px solid rgba(255, 155, 69, 0.5); }
+.g-miss    { color: #9aa6bd; background: rgba(154, 166, 189, 0.14); border: 1px solid rgba(154, 166, 189, 0.45); }
+
+.btn-group {
+	display: flex;
+	gap: 1vw;
+	justify-content: center;
+	flex-wrap: wrap;
+	margin-top: 2.4vh;
+}
+.btn {
+	display: inline-block;
+	margin-top: 2.4vh;
+	padding: 1.3vh 3vw;
+	font-size: 1.75vh;
+	font-weight: 800;
+	letter-spacing: 3px;
+	text-decoration: none;
+	border-radius: 5px;
+	cursor: pointer;
+	transition: transform 0.16s, box-shadow 0.16s, filter 0.16s;
+	border: none;
+	font-family: inherit;
+}
+.btn-group .btn { margin-top: 0; }
+.btn-primary {
+	color: #04121f;
+	background: linear-gradient(180deg, #9fe4ff, #35a8f0 55%, #1a6fc4);
+	box-shadow: 0 6px 20px rgba(50, 160, 245, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.btn-primary:hover { transform: translateY(-2px); filter: brightness(1.12); box-shadow: 0 10px 26px rgba(50, 160, 245, 0.6); }
+.btn-ghost {
+	color: #cfe8ff;
+	background: rgba(20, 40, 78, 0.7);
+	border: 1px solid rgba(120, 195, 255, 0.45);
+}
+.btn-ghost:hover { transform: translateY(-2px); background: rgba(30, 60, 112, 0.85); }
+.btn:active { transform: translateY(1px) scale(0.985); }
+
+.result-badge {
+	width: 9vh;
+	height: 9vh;
+	margin: 0 auto 1.4vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 5vh;
+	font-weight: 900;
+	color: #04121f;
+	border-radius: 50%;
+	background: linear-gradient(180deg, #b6ffd8, #35d98a 60%, #12a05e);
+	box-shadow: 0 0 34px rgba(60, 220, 140, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.6);
+	animation: badgePop 0.55s cubic-bezier(.2, 1.6, .4, 1);
+}
+.result-badge.lose {
+	background: linear-gradient(180deg, #ffb3bf, #f2436a 60%, #a3102f);
+	box-shadow: 0 0 34px rgba(255, 70, 110, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.5);
+	color: #2a0410;
+}
+@keyframes badgePop {
+	0%   { transform: scale(0.3) rotate(-20deg); }
+	60%  { transform: scale(1.14) rotate(4deg); }
+	100% { transform: scale(1) rotate(0); }
+}
+
+.stats {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 1.6vh 2.6vw;
+	margin-top: 2.2vh;
+}
+.stat { min-width: 88px; }
+.stat-label {
+	font-size: 1.25vh;
+	letter-spacing: 2px;
+	color: rgba(170, 205, 245, 0.65);
+}
+.stat-value {
+	margin-top: 0.4vh;
+	font-size: 3.2vh;
+	font-weight: 900;
+	color: #eaf6ff;
+	text-shadow: 0 0 12px rgba(90, 180, 255, 0.7);
+}
+.stat.hl .stat-value {
+	color: #ffd85e;
+	text-shadow: 0 0 14px rgba(255, 216, 94, 0.85), 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+/* 
+   窄屏适配
+    */
+@media (max-width: 900px) {
+	.fighter-panel { width: 38%; min-width: 0; }
+	.name-row .f-tag { display: none; }
+	.unit-cat    { left: 1vw; width: 43.8vh; height: 78vh; }
+	.unit-cat .s-idle { bottom: -29.6vh; }
+	.unit-protag { left: 16vw; width: 30.3vh; height: 54vh; }
+	.unit-protag .s-idle    { height: 115%; bottom: -1.57vh; }
+	.unit-protag .s-attack  { height: 96%;  bottom: -2.78vh; }
+	.unit-protag .s-defense { height: 86.4%; bottom: -2.50vh; }
+	.unit-rival  { right: 2vw; width: 32.6vh; height: 58vh; }
+	.unit-rival .s-idle   { bottom: -0.27vh; }
+	.unit-rival .s-attack { bottom: -0.35vh; }
+	.unit-rival .s-fail   { bottom: -0.65vh; }
+	.shield.cat  { width: 26vh; height: 19.5vh; }
+	.round-num { font-size: 3.4vh; }
+}

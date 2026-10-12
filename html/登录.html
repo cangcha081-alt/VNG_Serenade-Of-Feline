@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <section id="login-form">
+        <h1>WELCOME</h1>
+        <div id="loginForm">
+        <div class="input-wrap in-1">
+            <input type="text" id="loginUser" placeholder="请输入你的名字" 
+            spellcheck="false" required>
+
+        </div>
+        <div class="input-wrap in-2">
+            <input type="password" id="loginPassword" placeholder="请输入密码" required>
+        </div>
+        <div class="rem">
+            <p>
+                <input type="checkbox" id="rememberMe">
+                <span>记住密码</span>
+            </p> 
+         </div>
+        <button id="loginBtn" type="button">进入游戏</button>
+        <div id="loginMsg" class="msg" role="status" aria-live="polite"></div>
+        <p class="reg">
+            账号不存在？
+            <a id="showRegisterLink" href="#">立即注册</a>
+        </p>
+        </div>
+
+      <!-- 注册表单 -->
+           <div id="registerForm">
+        <div class="input-wrap in-1 reg-input">
+            <input type="text" id="regUser" placeholder="请填写账号姓名" spellcheck="false">
+        </div>
+        <div class="input-wrap in-2 reg-input">
+            <input type="password" id="regPassword" placeholder="请输入密码">
+        </div>
+        <div class="input-wrap in-3 reg-input">
+            <input type="password" id="regConfirm" placeholder="请再次输入密码">
+        </div>
+        <button id="registerBtn" type="button">立即注册</button>
+        <div id="registerMsg" class="msg" role="status" aria-live="polite"></div>
+        <p class="reg">
+            已有账号？
+            <a id="showLoginLink" href="#">立即登录</a>         
+        </p>
+    </div>
+    </section>
+    <script src="../js/login.js"></script>
+    <!--背景音乐：黑猫的夜曲（音量沿用游戏内设置）-->
+    <script>window.PAGE_BGM = { src: '../音乐/黑猫的夜曲.mp3' };</script>
+    <script src="../js/pageBgm.js"></script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>黒猫小夜曲 · 成就</title>
+	<link rel="icon" href="data:,">
+	<link rel="stylesheet" href="../css/achieve.css">
+</head>
+<body>
+
+<!-- 固定灰蓝夜空 + 流星（与设置页同款） -->
+<div class="bg-sky" aria-hidden="true">
+  <div class="meteor" style="left: 18%; animation-duration: 7.5s; animation-delay: 0s;"></div>
+  <div class="meteor" style="left: 42%; top: 6%; animation-duration: 9.5s; animation-delay: 3.2s;"></div>
+  <div class="meteor" style="left: 66%; animation-duration: 8.2s; animation-delay: 5.6s;"></div>
+  <div class="meteor" style="left: 84%; top: 12%; animation-duration: 10.5s; animation-delay: 1.8s;"></div>
+  <div class="meteor" style="left: 30%; top: 2%; animation-duration: 11s; animation-delay: 7.4s;"></div>
+  <div class="meteor" style="left: 8%;  top: 4%;  animation-duration: 8.8s;  animation-delay: 2.6s;  transform: scale(.8);"></div>
+  <div class="meteor" style="left: 52%; top: 14%; animation-duration: 9.8s;  animation-delay: 8.9s;  transform: scale(1.25);"></div>
+  <div class="meteor" style="left: 74%; top: 2%;  animation-duration: 7.8s;  animation-delay: 6.1s;"></div>
+  <div class="meteor" style="left: 92%; top: 8%;  animation-duration: 10.2s; animation-delay: 4.4s;  transform: scale(.85);"></div>
+  <div class="meteor" style="left: 24%; top: 10%; animation-duration: 9.2s;  animation-delay: 10.3s;"></div>
+  <div class="meteor" style="left: 60%; top: 18%; animation-duration: 8.5s;  animation-delay: 12.7s; transform: scale(1.15);"></div>
+  <div class="meteor" style="left: 38%; top: 0%;  animation-duration: 11.5s; animation-delay: 14.2s; transform: scale(.9);"></div>
+</div>
+
+<!-- 左上角：返回主页 -->
+	<a class="ach-back" href="hall.html" title="返回主页" aria-label="返回主页">
+		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+		     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<path d="M15 18l-6-6 6-6"/>
+		</svg>
+	</a>
+
+	<main class="ach-page">
+
+		<header class="ach-head">
+			<h1 class="ach-head__title">成 就</h1>
+			<p class="ach-head__sub">Achievements</p>
+		</header>
+
+		<!-- 进度 -->
+		<section class="ach-progress" aria-label="成就进度">
+			<div class="ach-progress__meta">
+				<span>已获得
+					<span class="ach-progress__count" id="achCount">0 / 0</span>
+				</span>
+				<span class="ach-progress__new" id="achUnseen" hidden></span>
+			</div>
+			<div class="ach-progress__track">
+				<span class="ach-progress__bar" id="achBar"></span>
+			</div>
+		</section>
+
+		<!-- 成就列表（含滑块，由 js/achieve.js 渲染） -->
+		<section class="ach-panel" aria-label="成就列表">
+			<ul class="ach-list" id="achList"></ul>
+		</section>
+
+	</main>
+
+	<script src="../js/userStore.js"></script>
+	<script src="../js/achieve.js"></script>
+  <script src="../js/fullscreenPref.js"></script>
+  <!--背景音乐：与主菜单同款《黑猫的夜曲》（音量沿用游戏内设置）-->
+  <script>window.PAGE_BGM = { src: '../音乐/黑猫的夜曲.mp3' };</script>
+  <script src="../js/pageBgm.js"></script>
+</body>
+</html>

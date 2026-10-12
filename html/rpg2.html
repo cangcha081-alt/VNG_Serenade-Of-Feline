@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>黑猫小夜曲 · RPG</title>
+  <link rel="stylesheet" href="../css/rpg.css">
+  <link rel="stylesheet" href="../css/achieve.css">
+</head>
+<body>
+  <div id="stage">
+    <img id="map" alt="map" draggable="false">
+    <canvas id="debug"></canvas>
+    <img id="player" alt="player" draggable="false">
+  </div>
+
+  <div id="hud">正在加载…</div>
+  <div id="teleport-tip"></div>
+
+  <script>window.RPG_GROUP = 2;</script>
+  <script src="../js/userStore.js"></script>
+  <script src="../js/masks-data.js"></script>
+  <script src="../js/achieve.js"></script>
+  <script src="../js/rpg.js"></script>
+  <!--背景音乐：研究室迷宫（循环；音量沿用游戏内设置，离开页面自动淡出）-->
+  <script>window.PAGE_BGM = { src: '../音乐/研究室迷宫.mp3', loop: true };</script>
+  <script src="../js/pageBgm.js"></script>
+  <script src="../js/fullscreenPref.js"></script>
+</body>
+</html>

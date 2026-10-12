@@ -1,0 +1,1070 @@
+/* =========================================================
+   存档系统样式（save.css）
+   含两部分：
+   ① index.html 游戏内存档按钮 + 模式面板 + 6 存档位弹层（墨夜金风）
+   ② loadPage.html 读取存档页（主菜单海军蓝玻璃风，与 hallstyle 协调）
+   本文件自带配色，不依赖其它样式表中的设计令牌。
+   ========================================================= */
+
+/* ============ ① 游戏内：菜单旁的存档按钮 ============ */
+.vn-menu__buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 存档按钮沿用 .vn-menu-toggle 圆形底；图标为软盘造型 */
+.vn-menu-toggle--save {
+  font-size: 0;
+}
+.vn-save-toggle__icon {
+  display: block;
+  width: 16px;
+  height: 14px;
+  position: relative;
+  border: 1.6px solid currentColor;
+  border-radius: 2px;
+  box-shadow: inset 0 -4px 0 -2px rgba(0, 0, 0, 0.35);
+}
+.vn-save-toggle__icon::before {          /* 软盘上部标签 */
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 7px;
+  height: 5px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+}
+.vn-save-toggle__icon::after {           /* 软盘下部滑片 */
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 1.5px;
+  height: 3px;
+  border: 1px solid currentColor;
+  border-top: 0;
+  border-radius: 0 0 1px 1px;
+}
+
+/* ============ ② 游戏内：存档弹层（index.html） ============ */
+.vn-save {
+  position: fixed;
+  inset: 0;
+  z-index: 60;                 /* 高于对话框(z20)与菜单(z40)，低于切景黑场(z100) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vh 3vw;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+.vn-save.is-open {
+  visibility: visible;
+  opacity: 1;
+}
+
+.vn-save__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 3, 8, 0.66);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.vn-save__panel,
+.vn-save__modal {
+  position: relative;
+  width: min(680px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  text-align: center;
+  color: #ece3d1;
+  background: linear-gradient(165deg, rgba(33, 27, 46, 0.97), rgba(12, 10, 18, 0.98));
+  border: 1px solid rgba(217, 184, 127, 0.3);
+  border-radius: 14px;
+  padding: clamp(18px, 3vh, 28px) clamp(16px, 2.6vw, 30px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 64px rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(14px) saturate(0.95);
+  -webkit-backdrop-filter: blur(14px) saturate(0.95);
+}
+
+/* 读档/存档弹层：比模式面板更宽，容得下 2 列 16:9 的画面卡 */
+.vn-save__modal {
+  width: min(780px, 94vw);
+}
+
+.vn-save__title {
+  margin: 0 0 6px;
+  font-size: clamp(18px, 3vh, 26px);
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  color: #f2dcab;
+  text-shadow: 0 0 14px rgba(217, 184, 127, 0.4);
+}
+.vn-save__hint {
+  margin: 0 0 16px;
+  font-size: clamp(12px, 1.7vh, 14px);
+  letter-spacing: 0.1em;
+  color: rgba(236, 227, 209, 0.62);
+}
+
+/* 模式选择面板的两个主按钮 */
+.vn-save__actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin: 18px 0 14px;
+}
+.vn-save__mode {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 14px 8px;
+  font-size: clamp(15px, 2.2vh, 18px);
+  letter-spacing: 0.24em;
+  text-indent: 0.24em;
+  color: #f2dcab;
+  background: rgba(217, 184, 127, 0.07);
+  border: 1px solid rgba(217, 184, 127, 0.55);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.vn-save__mode:hover {
+  color: #fff3d8;
+  border-color: rgba(240, 217, 166, 0.9);
+  background: rgba(217, 184, 127, 0.16);
+  box-shadow: 0 0 16px rgba(217, 184, 127, 0.28);
+}
+
+.vn-save__close {
+  margin-top: 16px;
+  opacity: 0.85;
+}
+
+/* ---------- 存档位画面缩略图（两个页面共用） ----------
+   由 js/saveSystem.js 的 buildShot() 生成：
+   夜色基底 + 背景图 + 立绘 + 对话框（说话人/台词），按游戏内的比例摆放。
+   容器必须给足宽高（用 aspect-ratio 固定 16:9），内部一律用 cq 单位，
+   因此同一套样式在游戏内弹层与读取页都能正确定标。 */
+.vn-shot {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  container-type: size;
+  /* 与 .vn-bg 相同的夜色基底：无背景图或图缺失时露出 */
+  background:
+    radial-gradient(120% 90% at 72% 6%, #1b1530 0%, transparent 55%),
+    radial-gradient(140% 120% at 85% 100%, #241a2e 0%, transparent 60%),
+    linear-gradient(180deg, #0d0b16 0%, #07060c 60%, #050409 100%);
+}
+.vn-shot__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+/* 立绘：右侧、底部抬高到对话框之上，高度与游戏内 --pt-h(56vh) 一致 */
+.vn-shot__portrait {
+  position: absolute;
+  right: 3cqw;
+  bottom: 33cqh;
+  height: 56cqh;
+  width: auto;
+  filter: drop-shadow(0 0.7cqh 1.4cqh rgba(0, 0, 0, 0.6));
+}
+/* 氛围层：暗角 + 上下渐隐（对应 .vn-bg__fx） */
+.vn-shot__fx {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 105% at 50% 38%, transparent 55%, rgba(6, 5, 10, 0.62) 100%),
+    linear-gradient(180deg, rgba(8, 6, 14, 0.30), transparent 20%, transparent 72%, rgba(5, 4, 9, 0.38));
+}
+/* 对话框：左右 3%、底 3%、高 30%（对应 --dlg-gap-x / --dlg-gap-b / --dlg-h） */
+.vn-shot__dialog {
+  position: absolute;
+  left: 3cqw;
+  right: 3cqw;
+  bottom: 3cqh;
+  height: 30cqh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1cqh;
+  padding: 1.4cqh 2.6cqw;
+  overflow: hidden;
+  border-radius: 6px;
+  color: #ece3d1;
+  background: linear-gradient(165deg,
+    rgba(46, 38, 60, 0.72) 0%,
+    rgba(24, 20, 34, 0.72) 36%,
+    rgba(10, 9, 16, 0.86) 100%);
+  border: 1px solid rgba(217, 184, 127, 0.20);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+/* 名字牌：字号先给 px 兜底，支持容器查询的浏览器再用 cqh 跟随卡片缩放 */
+.vn-shot__name {
+  flex: 0 0 auto;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0 0.6em;
+  font-size: 7px;
+  font-size: 4cqh;
+  line-height: 1.5;
+  letter-spacing: 0.14em;
+  color: #f2dcab;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: linear-gradient(120deg, rgba(24, 20, 34, 0.9), rgba(30, 25, 42, 0.6));
+  border-left: 1px solid rgba(217, 184, 127, 0.6);
+  border-radius: 0 4px 0 4px;
+}
+.vn-shot__text {
+  flex: 0 1 auto;
+  min-height: 0;
+  font-size: 7px;
+  font-size: 3.8cqh;
+  font-family: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: rgba(236, 227, 209, 0.94);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* 6 存档位网格 */
+.vn-save__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  text-align: left;
+}
+
+/* 每格＝一张 16:9 的“存档画面”卡 */
+.vn-save-slot {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  font-family: inherit;
+  text-align: left;
+  color: rgba(236, 227, 209, 0.55);
+  background: rgba(20, 16, 30, 0.55);
+  border: 1px solid rgba(217, 184, 127, 0.18);
+  border-radius: 12px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.22s ease;
+}
+.vn-save-slot:hover {
+  color: #fff3d8;
+  border-color: rgba(217, 184, 127, 0.8);
+  box-shadow: 0 0 16px rgba(217, 184, 127, 0.28);
+  transform: translateY(-2px);
+}
+.vn-save-slot:focus-visible {
+  outline: 1px solid #d9b87f;
+  outline-offset: 2px;
+}
+
+/* 顶部信息条：压在画面上方的暗色渐变里，不遮挡画面下方的对话框 */
+.vn-save-slot__head {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg,
+    rgba(6, 5, 10, 0.88) 0%,
+    rgba(6, 5, 10, 0.62) 58%,
+    transparent 100%);
+}
+/* 空档位：信息居中，不压暗整格 */
+.vn-save-slot:not(.is-occupied) .vn-save-slot__head {
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  background: none;
+}
+
+.vn-save-slot__num {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.vn-save-slot__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.35;
+}
+.vn-save-slot__chapter {
+  font-size: clamp(12px, 1.7vh, 14px);
+  letter-spacing: 0.06em;
+  color: #f2dcab;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vn-save-slot__time {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: rgba(236, 227, 209, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vn-save-slot__empty {
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  color: rgba(236, 227, 209, 0.35);
+}
+
+/* 已有存档：金边 */
+.vn-save-slot.is-occupied {
+  border-color: rgba(217, 184, 127, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(217, 184, 127, 0.12);
+}
+/* 自动存档位（仅读档模式出现）：编号牌换成“自”，边线偏亮 */
+.vn-save-slot.is-auto {
+  border-color: rgba(240, 217, 166, 0.75);
+}
+.vn-save-slot.is-auto .vn-save-slot__num {
+  color: #f2dcab;
+}
+
+/* 窄屏：存档位单列 */
+@media (max-width: 620px) {
+  .vn-save__grid { grid-template-columns: 1fr; }
+}
+
+/* ============ ③ 读取存档页（loadPage.html，主菜单风） ============
+   整页锁在一屏内：body 不滚动；纵向空间用 flex 分配，标题/自动存档卡按
+   vh 收放，手动存档位占满剩余高度（卡片高度随可用空间伸缩，宽度由 16:9
+   比例推出，列宽不够时按列宽收窄，因此任何窗口尺寸都不溢出。 */
+body.lp-body {
+  min-height: 0;
+  height: 100vh;
+  height: 100dvh;            /* 移动端排除地址栏高度，避免底部被裁 */
+  overflow: hidden;
+  font-family: "PingFang SC", "Microsoft YaHei", "Source Han Sans CN", serif;
+  color: #f4efe6;
+  background: url('../images/bgday.png') no-repeat center/cover;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#vnLoadPage {
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(12px, 2.8vh, 32px) clamp(16px, 4vw, 60px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.6vh, 18px);
+}
+
+.lp-back {
+  position: fixed;
+  top: 2.2rem;
+  left: 2.2rem;
+}
+
+.lp-title {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(20px, 3.6vh, 34px);
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  color: #ffffff;
+  text-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+  animation: lpFadeIn 0.8s ease-out both;
+}
+.lp-sub {
+  margin: clamp(2px, 0.7vh, 8px) 0 0;
+  text-align: center;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: clamp(0.7rem, 1.6vh, 0.9rem);
+  letter-spacing: 0.4em;
+  color: rgba(244, 239, 230, 0.55);
+  animation: lpFadeIn 0.8s 0.1s ease-out both;
+}
+
+.lp-block {
+  margin-top: 0;
+  min-height: 0;
+  animation: lpFadeIn 0.7s ease-out both;
+}
+.lp-block:nth-of-type(1) { animation-delay: 0.15s; }
+.lp-block:nth-of-type(2) { animation-delay: 0.25s; }
+
+/* 手动存档区：吃掉剩余高度，让 6 个存档位刚好铺满一屏 */
+.lp-block:not(.lp-auto) {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.lp-block h2 {
+  margin: 0 0 clamp(6px, 1.1vh, 12px);
+  padding-left: 14px;
+  border-left: 3px solid rgba(255, 255, 255, 0.75);
+  font-size: clamp(13px, 1.9vh, 17px);
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  color: #ffffff;
+}
+
+/* 自动存档卡：左＝画面缩略图，中＝信息，右＝继续游戏 */
+.lp-auto-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(10px, 1.6vh, 20px);
+  padding: clamp(9px, 1.5vh, 16px) clamp(14px, 1.8vw, 22px);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.lp-auto-card.is-occupied {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* 自动存档画面：16:9，高度随窗口收放（宽度由比例推出），无存档时虚线占位 */
+.lp-auto-shot {
+  position: relative;
+  height: clamp(74px, 15vh, 168px);
+  width: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(12, 22, 32, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 20px rgba(15, 29, 42, 0.22);
+}
+.lp-auto-shot:empty::after {
+  content: "暂无自动存档";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  color: rgba(244, 239, 230, 0.7);
+  border: 1px dashed rgba(255, 255, 255, 0.45);
+  border-radius: inherit;
+}
+
+.lp-auto-card .lp-auto-meta {
+  min-width: 0;
+  margin: 0;
+  font-size: clamp(0.72rem, 1.8vh, 0.92rem);
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+  color: rgba(244, 239, 230, 0.85);
+}
+
+/* ============ ④ 读取页：hall 主菜单按钮体系（.menuBtn）的本地化调整 ============
+   页面本身直接调用 hallstyle.css 与 js/script.js；
+   这里只覆盖尺寸/排版细节，使存档信息能放进胶囊按钮里。 */
+#vnLoadPage .menuBtn {
+  border-radius: 999px;
+}
+#vnLoadPage .menuBtn:hover {
+  transform: translateX(0) translateY(-2px);
+}
+#vnLoadPage .menuBtn:focus-visible {
+  outline: none;
+  border-color: rgba(255, 255, 255, 1);
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.30),
+    0 12px 32px rgba(0, 0, 0, 0.25);
+}
+#vnLoadPage .menuBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+#vnLoadPage .menuBtn:disabled:hover {
+  background:
+    linear-gradient(135deg,
+      rgba(255, 255, 255, 0.20) 0%,
+      rgba(255, 255, 255, 0.06) 100%),
+    rgba(20, 30, 42, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+#vnLoadPage .menuBtn:disabled:hover::before {
+  left: -40%;                       /* 禁用时不跑高光 */
+}
+
+/* —— 自动存档“继续游戏”按钮 —— */
+.lp-auto-btn {
+  flex: 0 0 auto;
+  padding: 10px 26px;
+}
+.lp-auto-btn .btnBody {
+  text-align: left;
+}
+.lp-auto-btn .lp-btn-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  color: #ffffff;
+  transition: letter-spacing 0.4s ease;
+  line-height: 1.2;
+}
+.lp-auto-btn:hover .lp-btn-title {
+  letter-spacing: 0.34em;
+}
+.lp-auto-btn .lp-btn-sub {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 0.8rem;
+  letter-spacing: 0.22em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* —— 6 个手动存档位（16:9 画面卡网格，占满剩余高度） —— */
+.lp-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);   /* 各行等分剩余高度：窄屏变 3/6 行也不会溢出 */
+  gap: clamp(8px, 1.3vh, 16px);
+}
+
+/* 卡片本体：背景即该存档所在页面的完整画面。
+   高度＝所在网格行高；宽度由 16:9 推出，列宽不够时按列宽收窄（不撑破网格）。 */
+#vnLoadPage .lp-grid .menuBtn.lp-slot {
+  position: relative;
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  justify-self: center;
+  align-self: center;
+  padding: 0;
+  text-align: left;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(12, 22, 32, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 8px 24px rgba(15, 29, 42, 0.26);
+}
+#vnLoadPage .lp-grid .menuBtn.lp-slot:hover {
+  transform: translateY(-3px);
+  border-color: #ffffff;
+  box-shadow:
+    0 14px 34px rgba(15, 29, 42, 0.34),
+    0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+/* 顶部信息条：压一层暗色渐变，保证画面再亮也能读清文字 */
+#vnLoadPage .lp-slot__body {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: clamp(6px, 1.2vh, 10px) clamp(8px, 1vw, 14px) clamp(12px, 2.6vh, 22px);
+  line-height: 1.35;
+  background: linear-gradient(180deg,
+    rgba(6, 5, 10, 0.86) 0%,
+    rgba(6, 5, 10, 0.55) 58%,
+    transparent 100%);
+}
+
+.lp-slot__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.lp-slot__label {
+  font-size: clamp(0.72rem, 1.9vh, 0.95rem);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+.lp-slot__tag {
+  flex: 0 0 auto;
+  font-size: clamp(0.5rem, 1.25vh, 0.6rem);
+  letter-spacing: 0.14em;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  padding: 1px 8px;
+  background: rgba(12, 10, 18, 0.4);
+}
+.lp-slot__tag.is-dim {
+  opacity: 0.6;
+}
+.lp-slot__chapter {
+  font-size: clamp(0.62rem, 1.7vh, 0.82rem);
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+.lp-slot__meta {
+  font-size: clamp(0.56rem, 1.45vh, 0.7rem);
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.62);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+/* 空档：浅色虚线 + 居中提示 */
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-empty {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px dashed rgba(29, 54, 71, 0.45);
+  box-shadow: 0 8px 22px rgba(15, 29, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-empty:hover {
+  transform: none;
+  background: rgba(255, 255, 255, 0.62);
+}
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-empty .lp-slot__body {
+  inset: 0;
+  justify-content: center;
+  align-items: center;
+  padding: 0 14px;
+  background: none;
+}
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-empty .lp-slot__head {
+  justify-content: center;
+}
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-empty .lp-slot__label,
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-empty .lp-slot__tag {
+  text-shadow: none;
+}
+.lp-slot__empty {
+  font-size: clamp(0.6rem, 1.6vh, 0.75rem);
+  letter-spacing: 0.2em;
+  color: rgba(29, 54, 71, 0.6);
+}
+
+/* 已有存档：亮边 */
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-occupied {
+  border-color: rgba(255, 255, 255, 0.85);
+}
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-occupied .lp-slot__tag {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* 入场动画：复用 hall 的 btnIn，按顺序依次进场 */
+#vnLoadPage .lp-block > .menuBtn {
+  animation: btnIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  opacity: 0;
+}
+.lp-grid .menuBtn.lp-slot {
+  animation: btnIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  opacity: 0;
+}
+.lp-auto-card > .menuBtn { animation-delay: 0.35s; }
+.lp-grid .menuBtn:nth-child(1) { animation-delay: 0.45s; }
+.lp-grid .menuBtn:nth-child(2) { animation-delay: 0.55s; }
+.lp-grid .menuBtn:nth-child(3) { animation-delay: 0.65s; }
+.lp-grid .menuBtn:nth-child(4) { animation-delay: 0.75s; }
+.lp-grid .menuBtn:nth-child(5) { animation-delay: 0.85s; }
+.lp-grid .menuBtn:nth-child(6) { animation-delay: 0.95s; }
+
+@keyframes lpFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 980px) {
+  #vnLoadPage { padding: clamp(10px, 2.2vh, 24px) clamp(14px, 3.6vw, 40px); }
+  .lp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lp-auto-card { gap: clamp(8px, 1.4vh, 14px); }
+  .lp-auto-shot { height: clamp(58px, 12vh, 120px); }
+  .lp-auto-btn { padding: clamp(6px, 1.1vh, 10px) clamp(14px, 1.8vw, 22px); }
+}
+/* 窄屏：自动存档卡改成竖排（缩略图居中），存档位保持 2 列以免卡片过小 */
+@media (max-width: 620px) {
+  .lp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lp-auto-card { grid-template-columns: 1fr; }
+  .lp-auto-card .lp-auto-meta { text-align: center; }
+  .lp-auto-card > .menuBtn { justify-self: center; }
+  .lp-auto-shot { height: clamp(50px, 11vh, 100px); margin: 0 auto; }
+}
+
+/* ============ ⑤ 亮色背景（bgday.png）下的暗色适配 ============
+   读取页换用亮色背景图后，将页面文字与按钮调整为暗色系：
+   · 页面文字/标题/说明 → 深海军蓝墨色
+   · 可交互按钮（继续游戏、已存档位）→ 深海军蓝玻璃 + 浅色文字
+   · 禁用态（无自动存档的继续按钮、空存档位）→ 浅玻璃 + 暗灰字 */
+body.lp-body {
+  color: #1d3647;
+  background-color: #dce7ec;          /* bgday.png 加载/未铺满前的浅色兜底 */
+}
+
+/* 返回按钮（hallstyle .backLink 原为白字 → 暗色） */
+.lp-body .lp-back {
+  color: #1d3647;
+  border-color: rgba(20, 45, 60, 0.55);
+}
+.lp-body .lp-back:hover {
+  background: rgba(20, 45, 60, 0.08);
+  border-color: rgba(20, 45, 60, 0.9);
+}
+.lp-body .lp-back:focus-visible {
+  outline: none;
+  border-color: rgba(20, 45, 60, 0.9);
+  box-shadow: 0 0 0 3px rgba(20, 45, 60, 0.25);
+}
+
+/* 标题 / 副标题 / 分区标题 */
+.lp-title {
+  color: #1d3647;
+  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.6);
+}
+.lp-sub {
+  color: rgba(20, 45, 60, 0.62);
+}
+.lp-block h2 {
+  color: #1d3647;
+  border-left-color: rgba(20, 45, 60, 0.8);
+}
+
+/* 自动存档卡：亮玻璃底 + 暗色说明 */
+.lp-auto-card {
+  background: rgba(255, 255, 255, 0.42);
+  border-color: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 10px 26px rgba(15, 29, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.lp-auto-card.is-occupied {
+  border-color: rgba(20, 45, 60, 0.4);
+}
+.lp-auto-card .lp-auto-meta {
+  color: #1d3647;
+}
+
+/* 可交互胶囊按钮：深海军蓝玻璃 + 浅色文字 */
+#vnLoadPage .menuBtn {
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.03) 100%),
+    linear-gradient(180deg, #2f5570 0%, #1f3a4f 52%, #10212f 100%);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 24px rgba(15, 29, 42, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+#vnLoadPage .menuBtn:hover {
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%),
+    linear-gradient(180deg, #3c6583 0%, #24445c 52%, #14293a 100%);
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 12px 30px rgba(15, 29, 42, 0.32),
+    0 0 0 1px rgba(255, 255, 255, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+#vnLoadPage .menuBtn:focus-visible {
+  outline: none;
+  border-color: #ffffff;
+  box-shadow:
+    0 0 0 3px rgba(20, 45, 60, 0.35),
+    0 12px 30px rgba(15, 29, 42, 0.3);
+}
+
+/* 禁用态：浅玻璃 + 暗灰文字（无自动存档的继续按钮 / 空存档位） */
+#vnLoadPage .menuBtn:disabled {
+  opacity: 0.9;
+  cursor: not-allowed;
+  transform: none;
+  color: rgba(29, 54, 71, 0.55);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px dashed rgba(29, 54, 71, 0.4);
+  box-shadow: none;
+}
+#vnLoadPage .menuBtn:disabled .btnArrow,
+#vnLoadPage .menuBtn:disabled .lp-btn-title,
+#vnLoadPage .menuBtn:disabled .lp-btn-sub {
+  color: inherit;
+  text-shadow: none;
+}
+#vnLoadPage .menuBtn:disabled:hover {
+  color: rgba(29, 54, 71, 0.55);
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(29, 54, 71, 0.4);
+  box-shadow: none;
+}
+#vnLoadPage .menuBtn:disabled:hover::before {
+  left: -40%;
+}
+
+/* 空存档位的暗色标签 */
+.lp-grid .menuBtn.lp-slot.is-empty .lp-slot__label {
+  color: rgba(29, 54, 71, 0.6);
+}
+.lp-grid .menuBtn.lp-slot.is-empty .lp-slot__tag {
+  color: rgba(29, 54, 71, 0.55);
+  border-color: rgba(29, 54, 71, 0.45);
+}
+
+/* ============ ⑥ 地图按钮 + 全屏地图浮层 ============
+   按钮复用存档按钮那套 .vn-menu-toggle 圆形底（HTML 里 #vnMapToggle）；
+   点开出现 .vn-map 全屏浮层：地图大图 cover 铺满整个视口（无边框无黑边），
+   「地 图」标题固定在屏幕正上方，「点击任意处关闭」提示固定在正下方，
+   Zone 渐变时双层图同步全屏。点击浮层任意处或按 Esc 关闭。 */
+.vn-menu-toggle--map {
+  font-size: 0;
+}
+/* 图标：折角地图（外框 + 一条斜向路线），线宽与存档图标一致 */
+.vn-map-toggle__icon {
+  display: block;
+  position: relative;
+  width: 16px;
+  height: 14px;
+}
+.vn-map-toggle__icon::before {          /* 地图外框 */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1.6px solid currentColor;
+  border-radius: 2px;
+}
+.vn-map-toggle__icon::after {           /* 路线（左下 → 右上的斜线） */
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 6px;
+  width: 12px;
+  height: 1.6px;
+  background: currentColor;
+  transform: rotate(-33deg);
+}
+
+/* 全屏浮层 */
+.vn-map {
+  position: fixed;
+  inset: 0;
+  z-index: 60;                          /* 高于菜单(z40)，低于黑场(z100)与章节标题 */
+  background: #04060a;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 260ms ease, visibility 0s linear 260ms;
+}
+.vn-map.is-open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 260ms ease, visibility 0s linear 0s;
+}
+.vn-map__panel {
+  margin: 0;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  font-size: 0;
+}
+/* 标题：固定在屏幕正上方的黑色边带里 */
+.vn-map__title {
+  position: absolute;
+  top: 15px;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  text-align: center;
+  font-size: 16px;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
+  color: #f2dcab;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 14px rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+}
+/* 图框：无边框、无圆角，四周留一圈黑边（图比视口略小一圈），
+   标题和提示正好落在上下两条黑边里 */
+.vn-map__frame {
+  position: absolute;
+  inset: 52px 44px;
+  background: #04060a;
+  font-size: 0;
+  overflow: hidden;
+}
+/* 双层图：base 常驻显示当前已确认的 zone；next 只在 zone 升级渐变时浮在上面。
+   object-fit: cover 让图铺满图框，框内不留黑边。 */
+.vn-map__img {
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.vn-map__img--next {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+/* 人物定位标：金点 + 脉冲光晕（箭头本身，名字在标注层）。
+   left/top 由 JS 按 object-fit: cover 的裁切换算成像素；
+   Zone 变化时 2.4s 平移到新地点（与交叉淡入同速）。 */
+.vn-map__pin {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -100%);     /* 定位基准＝针尖（圆点底部） */
+  pointer-events: none;
+  opacity: 0;
+  transition-property: left, top, opacity;
+  transition-duration: 2.4s, 2.4s, 500ms;
+  transition-timing-function: ease, ease, ease;
+}
+/* 地名标注层：所有已解锁地点都各有一枚名称胶囊，位置固定不随定位标移动 */
+.vn-map__labels {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.vn-map__label {
+  position: absolute;
+  transform: translate(-50%, 10px);      /* 悬在地点正下方一点，避开定位标 */
+  padding: 3px 12px;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-indent: 0.16em;
+  white-space: nowrap;
+  color: #f5ecd8;
+  background: linear-gradient(165deg, rgba(28, 23, 40, 0.88), rgba(10, 9, 16, 0.92));
+  border: 1px solid rgba(217, 184, 127, 0.45);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  opacity: 0.92;
+}
+/* 当前剧情所在地的标注：金边加亮以示区别 */
+.vn-map__label.is-now {
+  color: #ffe9a8;
+  border-color: rgba(240, 192, 74, 0.85);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), 0 0 12px rgba(240, 192, 74, 0.25);
+  opacity: 1;
+}
+.vn-map__pin__dot {
+  display: block;
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe9b0, #d9b87f 60%, #8a6a35);
+  border: 2px solid rgba(255, 244, 214, 0.95);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  animation: vnMapPinPulse 1.8s ease-out infinite;
+}
+/* 圆点下的小针尖 */
+.vn-map__pin__dot::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 8px;
+  height: 8px;
+  background: #d9b87f;
+  border-right: 2px solid rgba(255, 244, 214, 0.95);
+  border-bottom: 2px solid rgba(255, 244, 214, 0.95);
+  transform: translateX(-50%) rotate(45deg);
+}
+@keyframes vnMapPinPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(242, 220, 171, 0.55), 0 2px 6px rgba(0, 0, 0, 0.6); }
+  70%  { box-shadow: 0 0 0 14px rgba(242, 220, 171, 0), 0 2px 6px rgba(0, 0, 0, 0.6); }
+  100% { box-shadow: 0 0 0 0 rgba(242, 220, 171, 0), 0 2px 6px rgba(0, 0, 0, 0.6); }
+}
+/* 提示：固定在图（屏幕）正下方的黑色边带里 */
+.vn-map__hint {
+  position: absolute;
+  bottom: 15px;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.25em;
+  color: rgba(255, 248, 230, 0.9);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+/* 点击门模式（.vn-map.is-gate）：必须点中目标地点才能继续，
+   「点击任意处关闭」提示不适用——隐藏 */
+.vn-map.is-gate .vn-map__hint {
+  visibility: hidden;
+}
+
+/* 未解锁提示胶囊（点地图按钮但还没解锁时弹出） */
+.vn-map-toast {
+  position: fixed;
+  top: 78px;
+  right: 22px;
+  z-index: 70;
+  padding: 8px 16px;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: #f2dcab;
+  background: linear-gradient(165deg, rgba(33, 27, 46, 0.96), rgba(12, 10, 18, 0.97));
+  border: 1px solid rgba(217, 184, 127, 0.35);
+  border-radius: 999px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+.vn-map-toast.is-show {
+  opacity: 1;
+  transform: translateY(0);
+}

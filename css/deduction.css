@@ -1,0 +1,1621 @@
+/* =========================================================
+   推理阶段页样式（deduction.css）
+   ---------------------------------------------------------
+   照搬 plot 页面所用样式（原 css/save.css 全量拷贝）：
+   ① 游戏内：菜单旁的存档按钮
+   ② 游戏内：存档/读档弹层（模式面板 + 6 存档位）
+   ③④⑤ 读取存档页（loadPage.html 专用，本页暂未使用，保留以便后续按需取用）
+   ⑥ 推理阶段新增：系统提示（沿用 chapter 的转场方式，长句用 .is-notice 收字号）
+   后续按指令在本文件内改动，不影响 plot 页的 save.css。
+   ========================================================= */
+
+/* ============ ① 游戏内：菜单旁的存档按钮 ============ */
+.vn-menu__buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 存档按钮沿用 .vn-menu-toggle 圆形底；图标为软盘造型 */
+.vn-menu-toggle--save {
+  font-size: 0;
+}
+.vn-save-toggle__icon {
+  display: block;
+  width: 16px;
+  height: 14px;
+  position: relative;
+  border: 1.6px solid currentColor;
+  border-radius: 2px;
+  box-shadow: inset 0 -4px 0 -2px rgba(0, 0, 0, 0.35);
+}
+.vn-save-toggle__icon::before {          /* 软盘上部标签 */
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 7px;
+  height: 5px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+}
+.vn-save-toggle__icon::after {           /* 软盘下部滑片 */
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 1.5px;
+  height: 3px;
+  border: 1px solid currentColor;
+  border-top: 0;
+  border-radius: 0 0 1px 1px;
+}
+
+/* ============ ② 游戏内：存档弹层（index.html） ============ */
+.vn-save {
+  position: fixed;
+  inset: 0;
+  z-index: 60;                 /* 高于对话框(z20)与菜单(z40)，低于切景黑场(z100) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vh 3vw;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+.vn-save.is-open {
+  visibility: visible;
+  opacity: 1;
+}
+
+.vn-save__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 3, 8, 0.66);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.vn-save__panel,
+.vn-save__modal {
+  position: relative;
+  width: min(680px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  text-align: center;
+  color: #ece3d1;
+  background: linear-gradient(165deg, rgba(33, 27, 46, 0.97), rgba(12, 10, 18, 0.98));
+  border: 1px solid rgba(217, 184, 127, 0.3);
+  border-radius: 14px;
+  padding: clamp(18px, 3vh, 28px) clamp(16px, 2.6vw, 30px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 64px rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(14px) saturate(0.95);
+  -webkit-backdrop-filter: blur(14px) saturate(0.95);
+}
+
+/* 读档/存档弹层：比模式面板更宽，容得下 2 列 16:9 的画面卡 */
+.vn-save__modal {
+  width: min(780px, 94vw);
+}
+
+.vn-save__title {
+  margin: 0 0 6px;
+  font-size: clamp(18px, 3vh, 26px);
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  color: #f2dcab;
+  text-shadow: 0 0 14px rgba(217, 184, 127, 0.4);
+}
+.vn-save__hint {
+  margin: 0 0 16px;
+  font-size: clamp(12px, 1.7vh, 14px);
+  letter-spacing: 0.1em;
+  color: rgba(236, 227, 209, 0.62);
+}
+
+/* 模式选择面板的两个主按钮 */
+.vn-save__actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin: 18px 0 14px;
+}
+.vn-save__mode {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 14px 8px;
+  font-size: clamp(15px, 2.2vh, 18px);
+  letter-spacing: 0.24em;
+  text-indent: 0.24em;
+  color: #f2dcab;
+  background: rgba(217, 184, 127, 0.07);
+  border: 1px solid rgba(217, 184, 127, 0.55);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.vn-save__mode:hover {
+  color: #fff3d8;
+  border-color: rgba(240, 217, 166, 0.9);
+  background: rgba(217, 184, 127, 0.16);
+  box-shadow: 0 0 16px rgba(217, 184, 127, 0.28);
+}
+
+.vn-save__close {
+  margin-top: 16px;
+  opacity: 0.85;
+}
+
+/* ---------- 存档位画面缩略图（两个页面共用） ----------
+   由 js/saveSystem.js 的 buildShot() 生成：
+   夜色基底 + 背景图 + 立绘 + 对话框（说话人/台词），按游戏内的比例摆放。
+   容器必须给足宽高（用 aspect-ratio 固定 16:9），内部一律用 cq 单位，
+   因此同一套样式在游戏内弹层与读取页都能正确定标。 */
+.vn-shot {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  container-type: size;
+  /* 与 .vn-bg 相同的夜色基底：无背景图或图缺失时露出 */
+  background:
+    radial-gradient(120% 90% at 72% 6%, #1b1530 0%, transparent 55%),
+    radial-gradient(140% 120% at 85% 100%, #241a2e 0%, transparent 60%),
+    linear-gradient(180deg, #0d0b16 0%, #07060c 60%, #050409 100%);
+}
+.vn-shot__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+/* 立绘：右侧、底部抬高到对话框之上，高度与游戏内 --pt-h(56vh) 一致 */
+.vn-shot__portrait {
+  position: absolute;
+  right: 3cqw;
+  bottom: 33cqh;
+  height: 56cqh;
+  width: auto;
+  filter: drop-shadow(0 0.7cqh 1.4cqh rgba(0, 0, 0, 0.6));
+}
+/* 氛围层：暗角 + 上下渐隐（对应 .vn-bg__fx） */
+.vn-shot__fx {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 105% at 50% 38%, transparent 55%, rgba(6, 5, 10, 0.62) 100%),
+    linear-gradient(180deg, rgba(8, 6, 14, 0.30), transparent 20%, transparent 72%, rgba(5, 4, 9, 0.38));
+}
+/* 对话框：左右 3%、底 3%、高 30%（对应 --dlg-gap-x / --dlg-gap-b / --dlg-h） */
+.vn-shot__dialog {
+  position: absolute;
+  left: 3cqw;
+  right: 3cqw;
+  bottom: 3cqh;
+  height: 30cqh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1cqh;
+  padding: 1.4cqh 2.6cqw;
+  overflow: hidden;
+  border-radius: 6px;
+  color: #ece3d1;
+  background: linear-gradient(165deg,
+    rgba(46, 38, 60, 0.72) 0%,
+    rgba(24, 20, 34, 0.72) 36%,
+    rgba(10, 9, 16, 0.86) 100%);
+  border: 1px solid rgba(217, 184, 127, 0.20);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+/* 名字牌：字号先给 px 兜底，支持容器查询的浏览器再用 cqh 跟随卡片缩放 */
+.vn-shot__name {
+  flex: 0 0 auto;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0 0.6em;
+  font-size: 7px;
+  font-size: 4cqh;
+  line-height: 1.5;
+  letter-spacing: 0.14em;
+  color: #f2dcab;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: linear-gradient(120deg, rgba(24, 20, 34, 0.9), rgba(30, 25, 42, 0.6));
+  border-left: 1px solid rgba(217, 184, 127, 0.6);
+  border-radius: 0 4px 0 4px;
+}
+.vn-shot__text {
+  flex: 0 1 auto;
+  min-height: 0;
+  font-size: 7px;
+  font-size: 3.8cqh;
+  font-family: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: rgba(236, 227, 209, 0.94);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* 6 存档位网格 */
+.vn-save__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  text-align: left;
+}
+
+/* 每格＝一张 16:9 的“存档画面”卡 */
+.vn-save-slot {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  font-family: inherit;
+  text-align: left;
+  color: rgba(236, 227, 209, 0.55);
+  background: rgba(20, 16, 30, 0.55);
+  border: 1px solid rgba(217, 184, 127, 0.18);
+  border-radius: 12px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.22s ease;
+}
+.vn-save-slot:hover {
+  color: #fff3d8;
+  border-color: rgba(217, 184, 127, 0.8);
+  box-shadow: 0 0 16px rgba(217, 184, 127, 0.28);
+  transform: translateY(-2px);
+}
+.vn-save-slot:focus-visible {
+  outline: 1px solid #d9b87f;
+  outline-offset: 2px;
+}
+
+/* 顶部信息条：压在画面上方的暗色渐变里，不遮挡画面下方的对话框 */
+.vn-save-slot__head {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg,
+    rgba(6, 5, 10, 0.88) 0%,
+    rgba(6, 5, 10, 0.62) 58%,
+    transparent 100%);
+}
+/* 空档位：信息居中，不压暗整格 */
+.vn-save-slot:not(.is-occupied) .vn-save-slot__head {
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  background: none;
+}
+
+.vn-save-slot__num {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.vn-save-slot__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.35;
+}
+.vn-save-slot__chapter {
+  font-size: clamp(12px, 1.7vh, 14px);
+  letter-spacing: 0.06em;
+  color: #f2dcab;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vn-save-slot__time {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: rgba(236, 227, 209, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vn-save-slot__empty {
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  color: rgba(236, 227, 209, 0.35);
+}
+
+/* 已有存档：金边 */
+.vn-save-slot.is-occupied {
+  border-color: rgba(217, 184, 127, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(217, 184, 127, 0.12);
+}
+/* 自动存档位（仅读档模式出现）：编号牌换成“自”，边线偏亮 */
+.vn-save-slot.is-auto {
+  border-color: rgba(240, 217, 166, 0.75);
+}
+.vn-save-slot.is-auto .vn-save-slot__num {
+  color: #f2dcab;
+}
+
+/* 窄屏：存档位单列 */
+@media (max-width: 620px) {
+  .vn-save__grid { grid-template-columns: 1fr; }
+}
+
+/* ============ ③ 读取存档页（loadPage.html，主菜单风） ============
+   整页锁在一屏内：body 不滚动；纵向空间用 flex 分配，标题/自动存档卡按
+   vh 收放，手动存档位占满剩余高度（卡片高度随可用空间伸缩，宽度由 16:9
+   比例推出，列宽不够时按列宽收窄，因此任何窗口尺寸都不溢出。 */
+body.lp-body {
+  min-height: 0;
+  height: 100vh;
+  height: 100dvh;            /* 移动端排除地址栏高度，避免底部被裁 */
+  overflow: hidden;
+  font-family: "PingFang SC", "Microsoft YaHei", "Source Han Sans CN", serif;
+  color: #f4efe6;
+  background: url('../images/backgrounds/bgday.png') no-repeat center/cover;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#vnLoadPage {
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(12px, 2.8vh, 32px) clamp(16px, 4vw, 60px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.6vh, 18px);
+}
+
+.lp-back {
+  position: fixed;
+  top: 2.2rem;
+  left: 2.2rem;
+}
+
+.lp-title {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(20px, 3.6vh, 34px);
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  color: #ffffff;
+  text-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+  animation: lpFadeIn 0.8s ease-out both;
+}
+.lp-sub {
+  margin: clamp(2px, 0.7vh, 8px) 0 0;
+  text-align: center;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: clamp(0.7rem, 1.6vh, 0.9rem);
+  letter-spacing: 0.4em;
+  color: rgba(244, 239, 230, 0.55);
+  animation: lpFadeIn 0.8s 0.1s ease-out both;
+}
+
+.lp-block {
+  margin-top: 0;
+  min-height: 0;
+  animation: lpFadeIn 0.7s ease-out both;
+}
+.lp-block:nth-of-type(1) { animation-delay: 0.15s; }
+.lp-block:nth-of-type(2) { animation-delay: 0.25s; }
+
+/* 手动存档区：吃掉剩余高度，让 6 个存档位刚好铺满一屏 */
+.lp-block:not(.lp-auto) {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.lp-block h2 {
+  margin: 0 0 clamp(6px, 1.1vh, 12px);
+  padding-left: 14px;
+  border-left: 3px solid rgba(255, 255, 255, 0.75);
+  font-size: clamp(13px, 1.9vh, 17px);
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  color: #ffffff;
+}
+
+/* 自动存档卡：左＝画面缩略图，中＝信息，右＝继续游戏 */
+.lp-auto-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(10px, 1.6vh, 20px);
+  padding: clamp(9px, 1.5vh, 16px) clamp(14px, 1.8vw, 22px);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.lp-auto-card.is-occupied {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* 自动存档画面：16:9，高度随窗口收放（宽度由比例推出），无存档时虚线占位 */
+.lp-auto-shot {
+  position: relative;
+  height: clamp(74px, 15vh, 168px);
+  width: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(12, 22, 32, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 20px rgba(15, 29, 42, 0.22);
+}
+.lp-auto-shot:empty::after {
+  content: "暂无自动存档";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  color: rgba(244, 239, 230, 0.7);
+  border: 1px dashed rgba(255, 255, 255, 0.45);
+  border-radius: inherit;
+}
+
+.lp-auto-card .lp-auto-meta {
+  min-width: 0;
+  margin: 0;
+  font-size: clamp(0.72rem, 1.8vh, 0.92rem);
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+  color: rgba(244, 239, 230, 0.85);
+}
+
+/* ============ ④ 读取页：hall 主菜单按钮体系（.menuBtn）的本地化调整 ============
+   页面本身直接调用 hallstyle.css 与 js/script.js；
+   这里只覆盖尺寸/排版细节，使存档信息能放进胶囊按钮里。 */
+#vnLoadPage .menuBtn {
+  border-radius: 999px;
+}
+#vnLoadPage .menuBtn:hover {
+  transform: translateX(0) translateY(-2px);
+}
+#vnLoadPage .menuBtn:focus-visible {
+  outline: none;
+  border-color: rgba(255, 255, 255, 1);
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.30),
+    0 12px 32px rgba(0, 0, 0, 0.25);
+}
+#vnLoadPage .menuBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+#vnLoadPage .menuBtn:disabled:hover {
+  background:
+    linear-gradient(135deg,
+      rgba(255, 255, 255, 0.20) 0%,
+      rgba(255, 255, 255, 0.06) 100%),
+    rgba(20, 30, 42, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+#vnLoadPage .menuBtn:disabled:hover::before {
+  left: -40%;                       /* 禁用时不跑高光 */
+}
+
+/* —— 自动存档“继续游戏”按钮 —— */
+.lp-auto-btn {
+  flex: 0 0 auto;
+  padding: 10px 26px;
+}
+.lp-auto-btn .btnBody {
+  text-align: left;
+}
+.lp-auto-btn .lp-btn-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  color: #ffffff;
+  transition: letter-spacing 0.4s ease;
+  line-height: 1.2;
+}
+.lp-auto-btn:hover .lp-btn-title {
+  letter-spacing: 0.34em;
+}
+.lp-auto-btn .lp-btn-sub {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 0.8rem;
+  letter-spacing: 0.22em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* —— 6 个手动存档位（16:9 画面卡网格，占满剩余高度） —— */
+.lp-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);   /* 各行等分剩余高度：窄屏变 3/6 行也不会溢出 */
+  gap: clamp(8px, 1.3vh, 16px);
+}
+
+/* 卡片本体：背景即该存档所在页面的完整画面。
+   高度＝所在网格行高；宽度由 16:9 推出，列宽不够时按列宽收窄（不撑破网格）。 */
+#vnLoadPage .lp-grid .menuBtn.lp-slot {
+  position: relative;
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  justify-self: center;
+  align-self: center;
+  padding: 0;
+  text-align: left;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(12, 22, 32, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 8px 24px rgba(15, 29, 42, 0.26);
+}
+#vnLoadPage .lp-grid .menuBtn.lp-slot:hover {
+  transform: translateY(-3px);
+  border-color: #ffffff;
+  box-shadow:
+    0 14px 34px rgba(15, 29, 42, 0.34),
+    0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+/* 顶部信息条：压一层暗色渐变，保证画面再亮也能读清文字 */
+#vnLoadPage .lp-slot__body {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: clamp(6px, 1.2vh, 10px) clamp(8px, 1vw, 14px) clamp(12px, 2.6vh, 22px);
+  line-height: 1.35;
+  background: linear-gradient(180deg,
+    rgba(6, 5, 10, 0.86) 0%,
+    rgba(6, 5, 10, 0.55) 58%,
+    transparent 100%);
+}
+
+.lp-slot__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.lp-slot__label {
+  font-size: clamp(0.72rem, 1.9vh, 0.95rem);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+.lp-slot__tag {
+  flex: 0 0 auto;
+  font-size: clamp(0.5rem, 1.25vh, 0.6rem);
+  letter-spacing: 0.14em;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  padding: 1px 8px;
+  background: rgba(12, 10, 18, 0.4);
+}
+.lp-slot__tag.is-dim {
+  opacity: 0.6;
+}
+.lp-slot__chapter {
+  font-size: clamp(0.62rem, 1.7vh, 0.82rem);
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+.lp-slot__meta {
+  font-size: clamp(0.56rem, 1.45vh, 0.7rem);
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.62);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+/* 空档：浅色虚线 + 居中提示 */
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-empty {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px dashed rgba(29, 54, 71, 0.45);
+  box-shadow: 0 8px 22px rgba(15, 29, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-empty:hover {
+  transform: none;
+  background: rgba(255, 255, 255, 0.62);
+}
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-empty .lp-slot__body {
+  inset: 0;
+  justify-content: center;
+  align-items: center;
+  padding: 0 14px;
+  background: none;
+}
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-empty .lp-slot__head {
+  justify-content: center;
+}
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-empty .lp-slot__label,
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-empty .lp-slot__tag {
+  text-shadow: none;
+}
+.lp-slot__empty {
+  font-size: clamp(0.6rem, 1.6vh, 0.75rem);
+  letter-spacing: 0.2em;
+  color: rgba(29, 54, 71, 0.6);
+}
+
+/* 已有存档：亮边 */
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-occupied {
+  border-color: rgba(255, 255, 255, 0.85);
+}
+#vnLoadPage .lp-grid .menuBtn.lp-slot.is-occupied .lp-slot__tag {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* 入场动画：复用 hall 的 btnIn，按顺序依次进场 */
+#vnLoadPage .lp-block > .menuBtn {
+  animation: btnIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  opacity: 0;
+}
+.lp-grid .menuBtn.lp-slot {
+  animation: btnIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  opacity: 0;
+}
+.lp-auto-card > .menuBtn { animation-delay: 0.35s; }
+.lp-grid .menuBtn:nth-child(1) { animation-delay: 0.45s; }
+.lp-grid .menuBtn:nth-child(2) { animation-delay: 0.55s; }
+.lp-grid .menuBtn:nth-child(3) { animation-delay: 0.65s; }
+.lp-grid .menuBtn:nth-child(4) { animation-delay: 0.75s; }
+.lp-grid .menuBtn:nth-child(5) { animation-delay: 0.85s; }
+.lp-grid .menuBtn:nth-child(6) { animation-delay: 0.95s; }
+
+@keyframes lpFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 980px) {
+  #vnLoadPage { padding: clamp(10px, 2.2vh, 24px) clamp(14px, 3.6vw, 40px); }
+  .lp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lp-auto-card { gap: clamp(8px, 1.4vh, 14px); }
+  .lp-auto-shot { height: clamp(58px, 12vh, 120px); }
+  .lp-auto-btn { padding: clamp(6px, 1.1vh, 10px) clamp(14px, 1.8vw, 22px); }
+}
+/* 窄屏：自动存档卡改成竖排（缩略图居中），存档位保持 2 列以免卡片过小 */
+@media (max-width: 620px) {
+  .lp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lp-auto-card { grid-template-columns: 1fr; }
+  .lp-auto-card .lp-auto-meta { text-align: center; }
+  .lp-auto-card > .menuBtn { justify-self: center; }
+  .lp-auto-shot { height: clamp(50px, 11vh, 100px); margin: 0 auto; }
+}
+
+/* ============ ⑤ 亮色背景（bgday.png）下的暗色适配 ============
+   读取页换用亮色背景图后，将页面文字与按钮调整为暗色系：
+   · 页面文字/标题/说明 → 深海军蓝墨色
+   · 可交互按钮（继续游戏、已存档位）→ 深海军蓝玻璃 + 浅色文字
+   · 禁用态（无自动存档的继续按钮、空存档位）→ 浅玻璃 + 暗灰字 */
+body.lp-body {
+  color: #1d3647;
+  background-color: #dce7ec;          /* bgday.png 加载/未铺满前的浅色兜底 */
+}
+
+/* 返回按钮（hallstyle .backLink 原为白字 → 暗色） */
+.lp-body .lp-back {
+  color: #1d3647;
+  border-color: rgba(20, 45, 60, 0.55);
+}
+.lp-body .lp-back:hover {
+  background: rgba(20, 45, 60, 0.08);
+  border-color: rgba(20, 45, 60, 0.9);
+}
+.lp-body .lp-back:focus-visible {
+  outline: none;
+  border-color: rgba(20, 45, 60, 0.9);
+  box-shadow: 0 0 0 3px rgba(20, 45, 60, 0.25);
+}
+
+/* 标题 / 副标题 / 分区标题 */
+.lp-title {
+  color: #1d3647;
+  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.6);
+}
+.lp-sub {
+  color: rgba(20, 45, 60, 0.62);
+}
+.lp-block h2 {
+  color: #1d3647;
+  border-left-color: rgba(20, 45, 60, 0.8);
+}
+
+/* 自动存档卡：亮玻璃底 + 暗色说明 */
+.lp-auto-card {
+  background: rgba(255, 255, 255, 0.42);
+  border-color: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 10px 26px rgba(15, 29, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.lp-auto-card.is-occupied {
+  border-color: rgba(20, 45, 60, 0.4);
+}
+.lp-auto-card .lp-auto-meta {
+  color: #1d3647;
+}
+
+/* 可交互胶囊按钮：深海军蓝玻璃 + 浅色文字 */
+#vnLoadPage .menuBtn {
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.03) 100%),
+    linear-gradient(180deg, #2f5570 0%, #1f3a4f 52%, #10212f 100%);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 24px rgba(15, 29, 42, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+#vnLoadPage .menuBtn:hover {
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%),
+    linear-gradient(180deg, #3c6583 0%, #24445c 52%, #14293a 100%);
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 12px 30px rgba(15, 29, 42, 0.32),
+    0 0 0 1px rgba(255, 255, 255, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+#vnLoadPage .menuBtn:focus-visible {
+  outline: none;
+  border-color: #ffffff;
+  box-shadow:
+    0 0 0 3px rgba(20, 45, 60, 0.35),
+    0 12px 30px rgba(15, 29, 42, 0.3);
+}
+
+/* 禁用态：浅玻璃 + 暗灰文字（无自动存档的继续按钮 / 空存档位） */
+#vnLoadPage .menuBtn:disabled {
+  opacity: 0.9;
+  cursor: not-allowed;
+  transform: none;
+  color: rgba(29, 54, 71, 0.55);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px dashed rgba(29, 54, 71, 0.4);
+  box-shadow: none;
+}
+#vnLoadPage .menuBtn:disabled .btnArrow,
+#vnLoadPage .menuBtn:disabled .lp-btn-title,
+#vnLoadPage .menuBtn:disabled .lp-btn-sub {
+  color: inherit;
+  text-shadow: none;
+}
+#vnLoadPage .menuBtn:disabled:hover {
+  color: rgba(29, 54, 71, 0.55);
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(29, 54, 71, 0.4);
+  box-shadow: none;
+}
+#vnLoadPage .menuBtn:disabled:hover::before {
+  left: -40%;
+}
+
+/* 空存档位的暗色标签 */
+.lp-grid .menuBtn.lp-slot.is-empty .lp-slot__label {
+  color: rgba(29, 54, 71, 0.6);
+}
+.lp-grid .menuBtn.lp-slot.is-empty .lp-slot__tag {
+  color: rgba(29, 54, 71, 0.55);
+  border-color: rgba(29, 54, 71, 0.45);
+}
+
+/* ============ ⑥ 推理阶段：系统提示（沿用 chapter 的呈现方式） ============
+   复用 main.js 的 VN.scene.playChapterIntro：整屏渐黑 → 中央文字渐显 →
+   停留 → 渐隐 → 画面渐显；文本以「系统提示 · 正文」传入，由场景层拆成
+   上方标识行（.vn-chapter__kicker）与下方正文（.vn-chapter__main）。
+   chapter 的默认字号是给几个字的章节名用的，系统提示正文可能是整句话，
+   故加 .is-notice 把字号收小并限制宽度，保证一屏内不折行过多、不溢出。 */
+.vn-chapter.is-notice .vn-chapter__kicker {
+  font-size: clamp(12px, 1.9vh, 18px);
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+}
+.vn-chapter.is-notice .vn-chapter__main {
+  max-width: min(88vw, 20em);
+  font-size: clamp(24px, 4.6vh, 52px);
+  line-height: 1.7;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+}
+/* 整句话的提示（.is-long，由 deduction.js 按字数自动加）：收字号、放宽行距，
+   保证在任意窗口尺寸下都能一屏居中读完，不折行过多、不溢出。 */
+.vn-chapter.is-notice.is-long .vn-chapter__main {
+  max-width: min(88vw, 26em);
+  font-size: clamp(16px, 3vh, 30px);
+  line-height: 1.95;
+  letter-spacing: 0.08em;
+  text-indent: 0.08em;
+}
+
+/* ============ ⑦ 对话框 & 姓名栏：暗黑哥特（银灰线·尖拱·卷草·纸噪） ============
+   只影响本页（deduction.css），plot 页的 main.css 不受影响。
+   · 主体：近乎纯黑，叠一层低透明度纸张噪点（SVG feTurbulence 生成的颗粒）
+   · 外框：细银灰线，用「做旧蒙版」把线打薄、断续，避免死板直线
+   · 上下边缘：哥特尖拱轮廓（repeat-x 的尖拱带，逐格咬合，不是矩形圆角）
+   · 四角：简约卷草浮雕（双层四分之一圆弧括号）
+   · 文字：哥特衬线、字距略宽、极淡外发光、整体压暗不刺眼
+   ------------------------------------------------------------------------ */
+/* 共用材质：纸噪颗粒 + 做旧蒙版 + 银灰（对话框与物品栏共用一套） */
+:root {
+  /* 纸噪颗粒：极低 alpha 的白色细粒，只做质感，不抬亮底色 */
+  --dc-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .16 .16 .16 0 -.18'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* 做旧蒙版：alpha 基本为 1、间或变薄 → 用来打薄银线 */
+  --dc-aged: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.45' numOctaves='3' stitchTiles='stitch'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='3.2' intercept='0.5'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23a)'/%3E%3C/svg%3E");
+  --dc-silver: rgba(185, 189, 196, 0.5);
+  --dc-ink: #050506;
+}
+
+.vn-dialog {
+  /* 尖拱带：一格 48×18，拱下填近黑、拱线银灰且断续（做旧） */
+  --dc-arch: 18px;
+  --dc-arch-top: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='18' viewBox='0 0 48 18'%3E%3Cpath d='M0 18 Q14 5 24 2.6 Q34 5 48 18 Z' fill='%23050506'/%3E%3Cpath d='M0 18 Q14 5 24 2.6 Q34 5 48 18' fill='none' stroke='%23b9bdc4' stroke-opacity='.5' stroke-width='1' stroke-dasharray='7 1.2 3 .8 11 1 5 .9'/%3E%3Cpath d='M2.5 18 Q15 7.4 24 5.2' fill='none' stroke='%23ced3da' stroke-opacity='.18' stroke-width='.7'/%3E%3Cpath d='M45.5 18 Q33 7.4 24 5.2' fill='none' stroke='%23ced3da' stroke-opacity='.18' stroke-width='.7'/%3E%3C/svg%3E");
+  --dc-arch-bottom: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='18' viewBox='0 0 48 18'%3E%3Cg transform='translate(0,18) scale(1,-1)'%3E%3Cpath d='M0 18 Q14 5 24 2.6 Q34 5 48 18 Z' fill='%23050506'/%3E%3Cpath d='M0 18 Q14 5 24 2.6 Q34 5 48 18' fill='none' stroke='%23b9bdc4' stroke-opacity='.5' stroke-width='1' stroke-dasharray='7 1.2 3 .8 11 1 5 .9'/%3E%3Cpath d='M2.5 18 Q15 7.4 24 5.2' fill='none' stroke='%23ced3da' stroke-opacity='.18' stroke-width='.7'/%3E%3Cpath d='M45.5 18 Q33 7.4 24 5.2' fill='none' stroke='%23ced3da' stroke-opacity='.18' stroke-width='.7'/%3E%3C/g%3E%3C/svg%3E");
+  --dc-silver: rgba(185, 189, 196, 0.5);
+
+  background: none;                     /* 面板底色交给上下尖拱带 + __frame */
+  border: none;
+  border-radius: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding-top: var(--dc-arch);          /* 让出上下尖拱带，正文落在拱内 */
+  padding-bottom: var(--dc-arch);
+  box-shadow: 0 20px 54px rgba(0, 0, 0, 0.78);
+}
+
+/* 上边缘：尖拱带（拱线 = 对话框上轮廓） */
+.vn-dialog::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--dc-arch);
+  background-image: var(--dc-arch-top);
+  background-repeat: repeat-x;
+  background-size: 48px var(--dc-arch);
+  pointer-events: none;
+}
+/* 下边缘：同一尖拱带镜像 */
+.vn-dialog::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  inset: auto 0 0 0;
+  height: var(--dc-arch);
+  border: none;
+  background-image: var(--dc-arch-bottom);
+  background-repeat: repeat-x;
+  background-size: 48px var(--dc-arch);
+  box-shadow: none;
+  pointer-events: none;
+}
+
+/* 面板主体：近纯黑 + 纸噪 + 左右银灰做旧细线 */
+.vn-dialog__frame {
+  background-color: #050506;
+  background-image:
+    var(--dc-noise),
+    /* 左侧双细线（明暗不均 = 做旧） */
+    linear-gradient(180deg, transparent 0%, rgba(196, 200, 207, 0.42) 9%, rgba(140, 144, 151, 0.2) 34%, rgba(196, 200, 207, 0.4) 62%, rgba(140, 144, 151, 0.18) 83%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(206, 211, 218, 0.16) 14%, transparent 55%, rgba(206, 211, 218, 0.14) 88%, transparent 100%),
+    /* 右侧双细线 */
+    linear-gradient(180deg, transparent 0%, rgba(196, 200, 207, 0.4) 11%, rgba(140, 144, 151, 0.2) 38%, rgba(196, 200, 207, 0.38) 66%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(206, 211, 218, 0.14) 18%, transparent 60%, rgba(206, 211, 218, 0.12) 86%, transparent 100%);
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background-size:
+    180px 180px,
+    1px 100%, 1px 100%, 1px 100%, 1px 100%;
+  background-position:
+    left top,
+    left top, 3px top, right top, calc(100% - 3px) top;
+  /* 边缘往内压暗（用内阴影，不抬亮中心，避免和上下拱带出现接缝） */
+  box-shadow: inset 0 0 46px rgba(0, 0, 0, 0.62);
+}
+
+/* 内层银灰细框：位置让开尖拱带，并用做旧蒙版打薄线条 */
+.vn-dialog__frame::before {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: calc(var(--dc-arch) * 0.55) 5px;
+  border: 1px solid rgba(178, 182, 189, 0.26);
+  border-radius: 0;
+  pointer-events: none;
+  -webkit-mask-image: var(--dc-aged);
+  mask-image: var(--dc-aged);
+  -webkit-mask-size: 150px 150px;
+  mask-size: 150px 150px;
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+}
+
+/* 四角：简约哥特卷草浮雕（每角两层四分之一圆弧，形成卷叶括号） */
+.vn-dialog__frame::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle at 0 0,      transparent 0 16px, rgba(196, 200, 207, 0.5) 16px 17px, transparent 17px),
+    radial-gradient(circle at 0 0,      transparent 0 9px,  rgba(196, 200, 207, 0.3) 9px 9.8px, transparent 9.8px),
+    radial-gradient(circle at 100% 0,    transparent 0 16px, rgba(196, 200, 207, 0.5) 16px 17px, transparent 17px),
+    radial-gradient(circle at 100% 0,    transparent 0 9px,  rgba(196, 200, 207, 0.3) 9px 9.8px, transparent 9.8px),
+    radial-gradient(circle at 0 100%,    transparent 0 16px, rgba(196, 200, 207, 0.5) 16px 17px, transparent 17px),
+    radial-gradient(circle at 0 100%,    transparent 0 9px,  rgba(196, 200, 207, 0.3) 9px 9.8px, transparent 9.8px),
+    radial-gradient(circle at 100% 100%, transparent 0 16px, rgba(196, 200, 207, 0.5) 16px 17px, transparent 17px),
+    radial-gradient(circle at 100% 100%, transparent 0 9px,  rgba(196, 200, 207, 0.3) 9px 9.8px, transparent 9.8px);
+  background-size: 36px 36px;
+  background-position:
+    left top, left top,
+    right top, right top,
+    left bottom, left bottom,
+    right bottom, right bottom;
+}
+
+/* —— 姓名栏：黑石铭牌，银灰细边，哥特衬线、淡发光 —— */
+.vn-name {
+  position: relative;
+  transform: none;
+  border-radius: 0;
+  font-family: var(--font-serif, serif);
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  color: #c6bdab;                        /* 压暗的骨白，不刺眼 */
+  background-color: #060607;
+  background-image:
+    linear-gradient(90deg, transparent 0%, rgba(196, 200, 207, 0.42) 14%, rgba(150, 154, 161, 0.22) 48%, rgba(196, 200, 207, 0.38) 84%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, rgba(196, 200, 207, 0.34) 20%, rgba(150, 154, 161, 0.18) 62%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(196, 200, 207, 0.4) 30%, rgba(150, 154, 161, 0.2) 74%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(196, 200, 207, 0.4) 33%, rgba(150, 154, 161, 0.2) 70%, transparent 100%);
+  background-repeat: no-repeat;
+  background-size: 100% 1px, 100% 1px, 1px 100%, 1px 100%;
+  background-position: left top, left bottom, left top, right top;
+  border: none;
+  padding: 0.16em 1.15em 0.24em;
+  text-shadow:
+    0 0 12px rgba(198, 190, 170, 0.16),
+    0 1px 2px rgba(0, 0, 0, 0.95);
+}
+/* 名牌两侧小饰钉：银灰菱形 */
+.vn-name::before,
+.vn-name::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, rgba(206, 211, 218, 0.85), rgba(120, 124, 131, 0.75));
+  transform: translateY(-50%) rotate(45deg);
+  box-shadow: 0 0 6px rgba(190, 194, 201, 0.28);
+}
+.vn-name::before { left: -3.5px; }
+.vn-name::after { right: -3.5px; }
+
+/* 台词：哥特衬线、字距略宽、极淡外发光、整体不过亮 */
+.vn-text {
+  font-family: var(--font-serif, serif);
+  font-weight: 400;                      /* 不用粗体 */
+  letter-spacing: 0.09em;
+  color: #c3baa9;
+  text-shadow:
+    0 0 10px rgba(198, 190, 170, 0.13),
+    0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.vn-text-hint {
+  color: rgba(178, 182, 189, 0.38);
+  text-shadow: none;
+  letter-spacing: 0.14em;
+}
+
+/* ============ ⑨ 幻境卡：与 chapter 同一套转场，但字体走「虚幻」风 ============
+   用于情况1 收束那一句「现实中，菊子猛然惊醒。」：不用 chapter 的哥特衬线，
+   改用楷体（笔意流动）＋细体＋大字距＋多层冷色柔光＋极轻模糊＋缓慢呼吸，
+   做出梦醒时分那种虚浮、将散未散的质感。 */
+.vn-chapter.is-dream .vn-chapter__main {
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", "Songti SC", "SimSun", serif;
+  font-weight: 300;
+  font-size: clamp(24px, 5.4vh, 52px);
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  color: rgba(228, 238, 247, 0.92);
+  text-shadow:
+    0 0 18px rgba(184, 208, 232, 0.55),
+    0 0 44px rgba(146, 180, 214, 0.38),
+    0 0 96px rgba(122, 162, 202, 0.28),
+    0 1px 2px rgba(0, 0, 0, 0.55);
+  filter: blur(0.25px);
+  animation: dcDream 2.6s ease-in-out infinite alternate;
+}
+@keyframes dcDream {
+  from { opacity: 0.84; transform: translateY(1.5px); }
+  to   { opacity: 1;    transform: translateY(-1.5px); }
+}
+
+/* ============ ⑧ 物品栏：出示线索（布局照 线索栏.html，配色/交互改为暗黑哥特） ============
+   布局沿用 线索栏.html 的骨架：
+     外框容器（相对定位）
+       ├─ 顶部标题牌：绝对定位跨在外框上沿，两侧延伸装饰线
+       ├─ 问句框(.dialogue-box)：文字逐字打出（deduction.js，仿 main.js 打字机）
+       ├─ 物品区(.inventory-area) → 九宫格(.inventory-grid)，卡片(.clue-item)
+       └─ 底部操作区(.action-area) → 出示按钮(.submit-btn)
+   改动处：
+     · 卡片由参考文件的 4 列图标卡 → 3×3（9 张）；卡片做成「背景层 + 文字」
+       （不再需要圆形图标位，整张卡就是背景，图挂在本文件末尾 9 条规则里）
+     · 配色：米白/深蓝 → 近纯黑 + 纸噪 + 银灰做旧线（与对话框同一套材质）
+     · 交互：问句打完前卡片与按钮都锁定；点卡＝选中，选中后才可按「出示线索」提交
+   ========================================================================= */
+.dc-inv {
+  position: fixed;
+  inset: 0;
+  z-index: 70;                     /* 高于对话框(z20)/菜单(z40)，低于切景黑场(z100) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(14px, 3vh, 34px) clamp(14px, 3vw, 48px);
+  font-family: var(--font-cn, serif);
+  color: #c3baa9;
+}
+.dc-inv[hidden] { display: none; }
+
+/* 背景：深黑石室 + 顶部微光 + 暗角 */
+.dc-inv__backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(58, 54, 60, 0.22) 0%, transparent 58%),
+    radial-gradient(130% 110% at 50% 60%, rgba(8, 8, 10, 0.92) 0%, rgba(2, 2, 3, 0.98) 100%);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+/* —— 外框容器（对应 .clue-board-container）—— */
+.clue-board-container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(1080px, 100%);
+  height: 100%;                  /* 撑满一屏：物品区吃掉剩余高度，卡片随之变大 */
+  max-height: 100%;
+  padding: clamp(16px, 2.6vh, 30px);
+  background-color: var(--dc-ink);
+  background-image: var(--dc-noise);
+  background-size: 180px 180px;
+  border: 1px solid rgba(178, 182, 189, 0.3);
+  border-radius: 0;
+  box-shadow:
+    inset 0 0 46px rgba(0, 0, 0, 0.6),
+    0 20px 54px rgba(0, 0, 0, 0.7);
+}
+/* 内层细线（做旧打薄） */
+.clue-board-container::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(178, 182, 189, 0.14);
+  pointer-events: none;
+  -webkit-mask-image: var(--dc-aged);
+  mask-image: var(--dc-aged);
+  -webkit-mask-size: 150px 150px;
+  mask-size: 150px 150px;
+}
+/* 四角卷草 */
+.clue-board-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle at 0 0,      transparent 0 15px, rgba(196, 200, 207, 0.42) 15px 16px, transparent 16px),
+    radial-gradient(circle at 0 0,      transparent 0 8px,  rgba(196, 200, 207, 0.26) 8px 8.8px, transparent 8.8px),
+    radial-gradient(circle at 100% 0,    transparent 0 15px, rgba(196, 200, 207, 0.42) 15px 16px, transparent 16px),
+    radial-gradient(circle at 100% 0,    transparent 0 8px,  rgba(196, 200, 207, 0.26) 8px 8.8px, transparent 8.8px),
+    radial-gradient(circle at 0 100%,    transparent 0 15px, rgba(196, 200, 207, 0.42) 15px 16px, transparent 16px),
+    radial-gradient(circle at 0 100%,    transparent 0 8px,  rgba(196, 200, 207, 0.26) 8px 8.8px, transparent 8.8px),
+    radial-gradient(circle at 100% 100%, transparent 0 15px, rgba(196, 200, 207, 0.42) 15px 16px, transparent 16px),
+    radial-gradient(circle at 100% 100%, transparent 0 8px,  rgba(196, 200, 207, 0.26) 8px 8.8px, transparent 8.8px);
+  background-size: 34px 34px;
+  background-position:
+    left top, left top,
+    right top, right top,
+    left bottom, left bottom,
+    right bottom, right bottom;
+}
+
+/* —— 顶部标题牌：跨在上沿，两侧延伸装饰线（对应 .header）—— */
+.clue-header {
+  position: absolute;
+  top: -1.05em;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.22em 1.6em 0.3em;
+  background-color: #060607;
+  background-image: var(--dc-noise);
+  background-size: 180px 180px;
+  border: 1px solid rgba(184, 188, 195, 0.45);
+  border-radius: 0;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7), inset 0 0 18px rgba(0, 0, 0, 0.6);
+}
+.clue-header::before,
+.clue-header::after {                     /* 向两侧延伸的银灰细线 */
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 100vw;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(178, 182, 189, 0.35));
+  z-index: -1;
+}
+.clue-header::before { right: 100%; }
+.clue-header::after { left: 100%; }
+.clue-board-title {
+  margin: 0;
+  font-family: var(--font-serif, serif);
+  font-size: clamp(15px, 2.4vh, 22px);
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: #c9c0ae;
+  text-shadow: 0 0 18px rgba(198, 190, 170, 0.16), 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* —— 问句框（对应 .dialogue-box）—— */
+.dialogue-box {
+  position: relative;
+  flex: 0 0 auto;
+  margin: clamp(14px, 2.4vh, 26px) 0 clamp(10px, 1.6vh, 18px);
+  padding: clamp(9px, 1.6vh, 16px) clamp(14px, 2.2vw, 26px) clamp(15px, 2.2vh, 22px);
+  background-color: #070708;
+  background-image: var(--dc-noise);
+  background-size: 180px 180px;
+  border: 1px solid rgba(178, 182, 189, 0.26);
+  border-radius: 0;
+  box-shadow:
+    inset 0 0 34px rgba(0, 0, 0, 0.62),
+    0 12px 30px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+.dialogue-box::before {                   /* 内层细线（做旧） */
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(178, 182, 189, 0.14);
+  pointer-events: none;
+  -webkit-mask-image: var(--dc-aged);
+  mask-image: var(--dc-aged);
+  -webkit-mask-size: 140px 140px;
+  mask-size: 140px 140px;
+}
+.dialogue-box__text {
+  margin: 0;
+  font-family: var(--font-serif, serif);
+  font-size: clamp(14px, 2vh, 20px);
+  font-weight: 400;
+  line-height: 1.9;
+  letter-spacing: 0.09em;
+  color: #c3baa9;
+  text-shadow:
+    0 0 10px rgba(198, 190, 170, 0.13),
+    0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.dialogue-box__text + .dialogue-box__text { margin-top: 0.35em; }
+/* 分页断开：翻页后上一页的段落整体隐藏（deduction2 的 PAGE_BREAK 机制） */
+.dialogue-box__text.is-gone { display: none; }
+/* 还没打出的段落先占住一行，避免第二段出现时整块布局跳动、卡片被挤小 */
+.dialogue-box__text:empty::before { content: "\200B"; }
+/* 打字光标：只跟在正在逐字打出的那一段后面 */
+.dialogue-box__text.is-typing::after {
+  content: "";
+  display: inline-block;
+  width: 0.45em;
+  height: 1.05em;
+  margin-left: 0.12em;
+  vertical-align: -0.16em;
+  background: rgba(196, 200, 207, 0.5);
+  animation: dcCaret 1.05s steps(2, start) infinite;
+}
+@keyframes dcCaret { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+.dialogue-box__hint {
+  position: absolute;
+  right: clamp(8px, 1.4vw, 16px);
+  bottom: clamp(3px, 0.6vh, 7px);
+  font-family: var(--font-serif, serif);
+  font-size: clamp(10px, 1.35vh, 13px);
+  letter-spacing: 0.14em;
+  color: rgba(178, 182, 189, 0.4);
+}
+
+/* —— 物品区 + 九宫格（对应 .inventory-area / .inventory-grid，改 3×3）—— */
+.inventory-area {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  padding: clamp(8px, 1.4vh, 16px);
+  border: 1px solid rgba(178, 182, 189, 0.22);
+  border-radius: 0;
+  background-color: rgba(8, 8, 9, 0.55);
+}
+.inventory-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));   /* 3×3 */
+  grid-auto-rows: minmax(0, 1fr);
+  gap: clamp(7px, 1.2vh, 14px);
+}
+
+/* —— 单张线索卡（对应 .clue-item）：背景层 + 文字层 —— */
+.clue-item {
+  position: relative;
+  height: 100%;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  justify-self: center;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(6px, 1vh, 12px);
+  overflow: hidden;
+  border: 1px solid rgba(178, 182, 189, 0.26);
+  border-radius: 0;
+  background-color: var(--dc-ink);
+  background-image: var(--dc-noise);
+  background-size: 180px 180px;
+  color: #c3baa9;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.25s ease, box-shadow 0.3s ease,
+              opacity 0.35s ease, filter 0.35s ease;
+}
+/* 卡片背景图（你后续放图；没图时露出黑石底 + 纸噪 + 中央饰记） */
+.clue-bg {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transition: transform 0.55s ease;
+}
+/* 第 9 张卡：社区警示牌（guidepost.png 素材已补齐，与其他卡同规则贴图） */
+.clue-item[data-item="sign"] .clue-bg { background-image: url('../images/items1/guidepost.png'); }
+/* 文字层：压在背景上 */
+.clue-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.clue-name {
+  flex: 1 1 auto;
+  font-family: var(--font-serif, serif);
+  font-size: clamp(11px, 1.7vh, 16px);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: #c6bdab;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 10px rgba(198, 190, 170, 0.14);
+}
+.clue-desc {                               /* 描述位（暂空，后续要写就填这里） */
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+  font-family: var(--font-serif, serif);
+  font-size: clamp(10px, 1.35vh, 13px);
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: rgba(228, 220, 206, 0.62);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.clue-desc:empty { display: none; }
+/* 四角包边 */
+.clue-item::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  z-index: 3;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(rgba(196, 200, 207, 0.55), rgba(196, 200, 207, 0.55)),
+    linear-gradient(rgba(196, 200, 207, 0.55), rgba(196, 200, 207, 0.55)),
+    linear-gradient(rgba(196, 200, 207, 0.55), rgba(196, 200, 207, 0.55)),
+    linear-gradient(rgba(196, 200, 207, 0.55), rgba(196, 200, 207, 0.55)),
+    linear-gradient(rgba(196, 200, 207, 0.55), rgba(196, 200, 207, 0.55)),
+    linear-gradient(rgba(196, 200, 207, 0.55), rgba(196, 200, 207, 0.55)),
+    linear-gradient(rgba(196, 200, 207, 0.55), rgba(196, 200, 207, 0.55)),
+    linear-gradient(rgba(196, 200, 207, 0.55), rgba(196, 200, 207, 0.55));
+  background-size:
+    15px 1px, 1px 15px,
+    15px 1px, 1px 15px,
+    15px 1px, 1px 15px,
+    15px 1px, 1px 15px;
+  background-position:
+    left top, left top,
+    right top, right top,
+    left bottom, left bottom,
+    right bottom, right bottom;
+}
+
+/* 悬停 / 选中 / 提交中 */
+.dc-inv.is-ready .clue-item:hover,
+.dc-inv.is-ready .clue-item:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(214, 218, 224, 0.85);
+  box-shadow:
+    0 0 0 1px rgba(206, 211, 218, 0.28),
+    0 0 26px rgba(190, 194, 201, 0.22),
+    inset 0 0 26px rgba(0, 0, 0, 0.55);
+  outline: none;
+}
+.dc-inv.is-ready .clue-item:hover .clue-bg,
+.dc-inv.is-ready .clue-item:focus-visible .clue-bg { transform: scale(1.06); }
+
+.dc-inv.is-ready .clue-item.is-selected {
+  border-color: rgba(226, 230, 236, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(226, 230, 236, 0.4),
+    0 0 34px rgba(206, 211, 218, 0.3),
+    inset 0 0 40px rgba(206, 211, 218, 0.1);
+}
+.dc-inv.is-ready .clue-item.is-selected .clue-name { color: #ded6c2; }
+
+.clue-item.is-picked {
+  border-color: rgba(238, 242, 248, 0.98);
+  box-shadow:
+    0 0 0 1px rgba(238, 242, 248, 0.5),
+    0 0 46px rgba(206, 211, 218, 0.45),
+    inset 0 0 56px rgba(206, 211, 218, 0.16);
+  animation: dcPick 0.6s ease;
+}
+@keyframes dcPick {
+  0%   { transform: none; }
+  35%  { transform: scale(1.045); }
+  100% { transform: none; }
+}
+
+/* 问句打完前：卡片压暗不可点（锁定态） */
+.dc-inv.is-locked .clue-item {
+  opacity: 0.3;
+  filter: saturate(0.35) brightness(0.8);
+  pointer-events: none;
+}
+/* 解锁瞬间：依次扫过一层光（透明度由状态类决定，不写进关键帧） */
+.dc-inv.is-ready .clue-item { animation: dcUnlock 0.55s ease both; }
+.clue-item:nth-child(1) { animation-delay: 0.00s; }
+.clue-item:nth-child(2) { animation-delay: 0.05s; }
+.clue-item:nth-child(3) { animation-delay: 0.10s; }
+.clue-item:nth-child(4) { animation-delay: 0.15s; }
+.clue-item:nth-child(5) { animation-delay: 0.20s; }
+.clue-item:nth-child(6) { animation-delay: 0.25s; }
+.clue-item:nth-child(7) { animation-delay: 0.30s; }
+.clue-item:nth-child(8) { animation-delay: 0.35s; }
+.clue-item:nth-child(9) { animation-delay: 0.40s; }
+@keyframes dcUnlock {
+  0%   { box-shadow: 0 0 0 rgba(206, 211, 218, 0); }
+  55%  { box-shadow: 0 0 22px rgba(206, 211, 218, 0.26); }
+  100% { box-shadow: 0 0 0 rgba(206, 211, 218, 0); }
+}
+
+/* —— 底部操作区 + 出示按钮（对应 .action-area / .submit-btn）—— */
+.action-area {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: clamp(8px, 1.4vh, 16px);
+}
+.submit-btn {
+  padding: clamp(7px, 1.2vh, 12px) clamp(22px, 3vw, 44px);
+  font-family: var(--font-serif, serif);
+  font-size: clamp(13px, 1.9vh, 18px);
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-indent: 0.24em;
+  color: #cec5b2;
+  background-color: #0a0a0c;
+  background-image: var(--dc-noise);
+  background-size: 180px 180px;
+  border: 1px solid rgba(184, 188, 195, 0.5);
+  border-radius: 0;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), inset 0 0 18px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 0 10px rgba(198, 190, 170, 0.14);
+  transition: color 0.25s ease, border-color 0.25s ease, box-shadow 0.3s ease,
+              background-color 0.25s ease, transform 0.15s ease;
+}
+.submit-btn:hover:not(:disabled) {
+  color: #efe8d8;
+  border-color: rgba(226, 230, 236, 0.9);
+  background-color: #121215;
+  box-shadow:
+    0 0 0 1px rgba(226, 230, 236, 0.25),
+    0 0 26px rgba(206, 211, 218, 0.28),
+    inset 0 0 22px rgba(0, 0, 0, 0.6);
+}
+.submit-btn:active:not(:disabled) { transform: translateY(1px); }
+.submit-btn:focus-visible {
+  outline: none;
+  border-color: rgba(238, 242, 248, 0.95);
+  box-shadow: 0 0 0 3px rgba(206, 211, 218, 0.22), 0 0 26px rgba(206, 211, 218, 0.25);
+}
+.submit-btn:disabled {
+  color: rgba(178, 182, 189, 0.32);
+  border-color: rgba(178, 182, 189, 0.18);
+  cursor: not-allowed;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+/* 窄屏：仍是 3×3，只收间距与字号 */
+@media (max-width: 720px) {
+  .dc-inv { padding: 12px 10px; }
+  .clue-board-container { padding: 14px 10px; }
+  .inventory-grid { gap: 6px; }
+  .dialogue-box__hint { letter-spacing: 0.06em; }
+}
+
+/* =====================================================================
+   线索卡背景图：把 9 张图按下面文件名放进 images/items/ 即可自动生效，
+   也可以直接改 url() 指向自己的路径。没放图时卡片显示黑石底 + 纸噪 + 中央饰记。
+   sakura 窗外的樱花树 / tv 电视 / phone 电话机的通话记录 /
+   briefcase 商务座与公文包 / photo 餐桌上的合影照 / mural 壁画 /
+   diary 菊子的日记 / letter 口袋中的“遗书” / sign 社区警示牌
+   ===================================================================== */
+/* 卡片背景图：暂用 items1 现有素材（sign 暂无图，走 .clue-bg::after 菱形占位）
+   壁画沿用 RPG1 的映射（photo.png 相框画）；合影照用 desk.png 餐桌呈现 */
+.clue-item[data-item="sakura"]    .clue-bg { background-image: url('../images/items1/window.png'); }
+.clue-item[data-item="tv"]        .clue-bg { background-image: url('../images/items1/tv.png'); }
+.clue-item[data-item="phone"]     .clue-bg { background-image: url('../images/items1/phone.png'); }
+.clue-item[data-item="briefcase"] .clue-bg { background-image: url('../images/items1/chair.png'); }
+.clue-item[data-item="photo"]     .clue-bg { background-image: url('../images/items1/desk.png'); }
+.clue-item[data-item="mural"]     .clue-bg { background-image: url('../images/items1/photo.png'); }
+.clue-item[data-item="diary"]     .clue-bg { background-image: url('../images/items1/diary.png'); }
+.clue-item[data-item="letter"]    .clue-bg { background-image: url('../images/items1/note.png'); }
+
+/* ---------- 第二组（deduction2.html · 千崎的梦境）8 张卡片背景图 ----------
+   toyota 丰田汽车 / notebook 笔记本 / nokia 诺基亚（千崎的备忘录） /
+   gate 实验室大门 / doorlock 实验室门禁 / report 案件报告 /
+   pc 桌上的电脑 / stafflist 研究室人员名单 */
+.clue-item[data-item="toyota"]    .clue-bg { background-image: url('../images/items2/car.png'); }
+.clue-item[data-item="notebook"]  .clue-bg { background-image: url('../images/items2/notebook.png'); }
+.clue-item[data-item="nokia"]     .clue-bg { background-image: url('../images/items2/nokia.png'); }
+.clue-item[data-item="gate"]      .clue-bg { background-image: url('../images/items2/frontdoor.png'); }
+.clue-item[data-item="doorlock"]  .clue-bg { background-image: url('../images/items2/system.png'); }
+.clue-item[data-item="report"]    .clue-bg { background-image: url('../images/items2/file.png'); }
+.clue-item[data-item="pc"]        .clue-bg { background-image: url('../images/items2/computer.png'); }
+.clue-item[data-item="stafflist"] .clue-bg { background-image: url('../images/items2/board.png'); }
+
+/* =====================================================================
+   ⑪ 右键证物卡 → 居中弹出物品栏介绍（纯文字，点击任意处/Esc 关闭）
+   deduction.js / deduction2.js 共用；风格与 vn-dialog 一致
+   ===================================================================== */
+.clue-desc-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: clue-desc-fade 0.18s ease;
+}
+@keyframes clue-desc-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.clue-desc-box {
+  max-width: min(620px, 84vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: clamp(22px, 4vh, 36px) clamp(28px, 4vw, 48px);
+  text-align: center;
+  color: #ece3d1;
+  font-family: var(--font-serif);
+  background: linear-gradient(165deg, rgba(46, 38, 60, 0.92) 0%, rgba(24, 20, 34, 0.90) 36%, rgba(10, 9, 16, 0.94) 100%);
+  border: 1px solid rgba(217, 184, 127, 0.30);
+  border-radius: clamp(10px, 1.6vh, 18px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 22px 50px rgba(0, 0, 0, 0.60);
+  cursor: pointer;
+  animation: clue-desc-rise 0.22s ease;
+}
+@keyframes clue-desc-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.clue-desc-name {
+  margin-bottom: 0.9em;
+  font-size: clamp(16px, 2.2vh, 20px);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: #f2dcab;
+  text-shadow: 0 0 12px rgba(217, 184, 127, 0.30), 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.clue-desc-text {
+  font-size: clamp(14px, 1.9vh, 18px);
+  line-height: 2;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+  word-break: break-all;
+}
+
+/* 分页期间隐藏卡片网格（deduction2 第 1 页），翻页时由 JS 移除本类 */
+#dcInvGrid.is-concealed { visibility: hidden; }
+
+/* 坏结局对话背景：地图图底压暗，保证对话框文字可读 */
+.vn-bg.is-dim .vn-bg__img { opacity: 0.55; filter: brightness(0.72) saturate(0.85); }

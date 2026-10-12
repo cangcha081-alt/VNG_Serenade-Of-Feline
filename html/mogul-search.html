@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Mogul Search 猫眼搜索｜剧情检索页（原型）</title>
+<link rel="stylesheet" href="../css/achieve.css">
+<style>
+  /* =========================================================
+     黑猫小夜曲 · 伪搜索引擎 "Mogul Search 猫眼搜索"
+     2010 年代日式搜索引擎风格 / 可嵌入视觉小说引擎
+     主色：白底 + #1A1A2E 深蓝灰 + #2D7FF9 蓝 + #006621 链接绿
+     ========================================================= */
+  :root{
+    --ink:#1a1a2e;
+    --ink-soft:#4a4a5e;
+    --blue:#2d7ff9;
+    --blue-deep:#1d63c9;
+    --green:#006621;
+    --gray:#666;
+    --gray-light:#76798c;
+    --line:#e4e7ec;
+    --line-soft:#f0f2f6;
+    --bg:#ffffff;
+    --panel:#f7f9fc;
+    --radius:8px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Hiragino Sans GB","Source Han Sans CN","Noto Sans SC","Segoe UI",Arial,sans-serif;
+    color:var(--ink);
+    background:var(--bg);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input,select,textarea{font-family:inherit}
+  button{cursor:pointer}
+  a{color:var(--blue)}
+  ::selection{background:#dbe9ff}
+
+  .is-hidden{display:none !important}
+
+  /* ---------- 通用 Mast（结果页顶栏；仅 results 视图显示） ---------- */
+  #topMast{display:none;position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(26,26,46,.05)}
+  body[data-view="results"] #topMast{display:block}
+  .mast-accent{height:3px;background:linear-gradient(90deg,var(--blue),#7db4ff)}
+  .mast-inner{
+    max-width:980px;margin:0 auto;padding:10px 16px;
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  }
+  .brand{
+    display:flex;align-items:baseline;gap:7px;cursor:pointer;
+    color:var(--ink);text-decoration:none;user-select:none;
+    min-height:44px;padding-top:9px;
+  }
+  .brand .word{font-size:22px;font-weight:800;letter-spacing:.2px}
+  .brand .word i{font-style:normal;color:var(--blue)}
+  .brand .ja{font-size:14px;font-weight:600;color:#8a8fa3}
+  .brand .beta{
+    font-size:11px;line-height:1;color:var(--blue);border:1px solid var(--blue);
+    border-radius:3px;padding:2px 4px;font-weight:700;vertical-align:middle;
+  }
+  .top-actions{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:12px;color:#8a8fa3}
+  .top-actions button{background:none;border:0;padding:0;color:#8a8fa3;min-height:44px;line-height:44px;font-size:12px}
+  .top-actions button:hover{color:var(--blue);text-decoration:underline}
+
+  /* ---------- 搜索框 ---------- */
+  .mast-inner .searchform{flex:1;min-width:260px;max-width:640px}
+  .searchform{margin:0}
+  .searchbox{
+    display:flex;align-items:stretch;background:#fff;
+    border:2px solid #cdd7e4;border-radius:999px;overflow:hidden;
+    transition:border-color .15s ease,box-shadow .15s ease;
+  }
+  .searchbox:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(45,127,249,.13)}
+  .search-ic{flex:0 0 auto;display:flex;align-items:center;padding-left:16px;color:#8a8fa3;pointer-events:none}
+  .searchbox input{
+    flex:1 1 auto;min-width:0;border:0;outline:0;background:transparent;
+    min-height:46px;padding:0 8px;font-size:17px;color:var(--ink);
+  }
+  .searchbox input::placeholder{color:#a7adbb}
+  .btn-search{
+    border:0;background:var(--blue);color:#fff;font-weight:600;
+    min-width:92px;min-height:44px;padding:0 20px;border-radius:999px;margin:2px;
+    font-size:16px;letter-spacing:.5px;transition:background .15s ease;
+  }
+  .btn-search:hover{background:var(--blue-deep)}
+  .btn-search:active{transform:translateY(1px)}
+  .btn-search:focus-visible,.searchbox input:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+
+  /* ---------- 视图容器 ---------- */
+  .view{display:none}
+  body[data-view="home"]   #viewHome{display:flex}
+  body[data-view="results"] #viewResults{display:block}
+  body[data-view="corp"]   #viewCorp{display:block}
+  body[data-view="prof"]   #viewProf{display:block}
+  main{flex:1 0 auto}
+
+  /* ---------- 首页（初始检索状态） ---------- */
+  #viewHome{
+    min-height:86vh;flex-direction:column;align-items:center;justify-content:center;
+    padding:44px 18px 70px;text-align:center;
+  }
+  .hero-logo{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:28px}
+  .hero-eyeball{display:flex;align-items:center;gap:12px}
+  .hero-cat{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:58px;height:58px;border-radius:16px;background:#eaf2ff;
+  }
+  .hero-word{font-size:clamp(34px,6vw,58px);font-weight:800;letter-spacing:.5px;line-height:1}
+  .hero-word i{font-style:normal;color:var(--blue)}
+  .hero-ja{font-size:20px;color:#76798c;font-weight:600;letter-spacing:2px}
+  .hero-meta{margin-top:18px;font-size:12px;color:#a7adbb;letter-spacing:1px}
+  .hero-meta b{color:#7a86ff;font-weight:700}
+  .homeform{width:min(680px,100%);margin:0 auto}
+  .homeform .searchbox{border-radius:30px;box-shadow:0 1px 6px rgba(26,26,46,.07)}
+  .homeform .searchbox input{min-height:52px;font-size:18px}
+  .homeform .btn-search{min-height:48px;min-width:110px;font-size:17px}
+  .home-hint{margin-top:14px;font-size:12px;color:#a7adbb}
+
+  /* ---------- 结果页 ---------- */
+  .results-wrap{max-width:740px;margin:0 auto;padding:22px 18px 90px}
+  .result-meta{font-size:13px;color:#8a8fa3;margin:2px 0 16px}
+  .result-meta b{color:#5b6073;font-weight:600}
+  .b-list{list-style:none;margin:0;padding:0}
+  .b-item{margin:0 0 16px;padding-bottom:4px}
+  .b-title{margin:0 0 3px;font-size:16px;font-weight:500;line-height:1.35}
+  .linkish{
+    background:none;border:0;padding:0;margin:0;
+    font:inherit;color:inherit;text-align:left;cursor:pointer;
+  }
+  .b-title .linkish{color:var(--blue);min-height:26px}
+  .b-title .linkish:hover{text-decoration:underline;color:var(--blue-deep)}
+  .b-title .linkish:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:3px}
+  .b-snippet{font-size:14px;color:var(--gray);line-height:1.6;margin:4px 0 5px}
+  .b-url{
+    font-size:13px;color:var(--green);word-break:break-all;
+    display:flex;align-items:center;gap:6px;line-height:1.5;
+  }
+  .b-favicon{
+    width:14px;height:14px;flex:0 0 14px;display:inline-flex;align-items:center;justify-content:center;
+    color:#94a3b8;
+  }
+  .b-url .breadcrumb{color:#5b8a6b}
+  .news-cue{font-size:11px;color:#8aa0b8;margin-left:4px;font-weight:400}
+  .b-news-body{
+    display:none;margin:8px 0 0;padding:12px 14px;background:#f6faff;border-left:3px solid #bcd9ff;
+    border-radius:0 8px 8px 0;font-size:13px;color:#4b5a6e;line-height:1.9;
+  }
+  .b-news-body.open{display:block}
+  .pager{
+    margin:34px 0 0;padding-top:18px;border-top:1px solid var(--line-soft);
+    display:flex;align-items:center;gap:4px;flex-wrap:wrap;color:#5b7fa8;
+  }
+  .pager button{
+    background:none;border:0;color:var(--blue);min-height:44px;padding:0 10px;font-size:14px;
+  }
+  .pager button:hover{text-decoration:underline}
+  .pager button[disabled]{color:#b6bcc9;cursor:default;text-decoration:none}
+  .pager .cur{color:#333}
+
+  /* 加载动画 */
+  .loading-panel{
+    display:flex;align-items:center;justify-content:center;gap:14px;
+    padding:90px 0 120px;color:#5b6073;font-size:15px;
+  }
+  .spinner{
+    width:30px;height:30px;border:4px solid #dde6f2;border-top-color:var(--blue);
+    border-radius:50%;animation:spin .75s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* 报错页 */
+  .error-panel{max-width:560px;margin:44px auto;padding:30px 24px 34px;text-align:center;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+  .error-ic{
+    width:54px;height:54px;margin:0 auto 16px;border-radius:50%;
+    background:#fff0ee;color:#c2543c;display:flex;align-items:center;justify-content:center;
+  }
+  .error-panel h2{font-size:18px;margin:0 0 8px;color:#a63c28;font-weight:600}
+  .error-panel p{font-size:14px;color:var(--gray);margin:0 0 14px;line-height:1.7}
+  .error-timer{font-size:12px;color:#a7adbb}
+
+  /* ---------- 底部（Mogul 仅主检索体验可见） ---------- */
+  .app-footer{display:none;border-top:1px solid var(--line-soft);background:#fbfcfe;padding:16px 18px 26px;text-align:center;font-size:12px;color:#9aa0af}
+  body[data-view="home"] .app-footer,
+  body[data-view="results"] .app-footer{display:block}
+  .app-footer .links{display:flex;justify-content:center;gap:16px;margin-bottom:8px;flex-wrap:wrap}
+  .app-footer .links button{background:none;border:0;color:#8a8fa3;font-size:12px;padding:0}
+  .app-footer .links button:hover{color:var(--blue);text-decoration:underline}
+
+  /* 开发注释（独立演示时可见；嵌入 VN 时隐藏） */
+  body.vn-mode .dev-note{display:none !important}
+
+  /* ---------- 子页面公共 ---------- */
+  .subpage{background:#fff}
+  .back-row{
+    position:sticky;top:0;z-index:25;max-width:1120px;margin:0 auto;padding:10px 16px;
+    background:rgba(255,255,255,.97);border-bottom:1px solid var(--line-soft);
+  }
+  .js-back{
+    display:inline-flex;align-items:center;gap:8px;min-height:50px;padding:0 22px;
+    border-radius:999px;border:2px solid var(--blue);background:#fff;color:var(--blue);
+    font-size:17px;font-weight:700;box-shadow:0 2px 10px rgba(45,127,249,.16);
+  }
+  .js-back:hover{background:#eef5ff;color:var(--blue-deep);border-color:var(--blue-deep)}
+  .js-back:active{transform:translateY(1px)}
+  .js-back .arr{font-size:22px;line-height:1;margin-top:-2px}
+  .results-topbar{margin:0 0 10px}
+  .results-topbar .js-back{border-color:#c3cfdd;color:#42536b;box-shadow:0 2px 8px rgba(26,26,46,.09)}
+  .results-topbar .js-back:hover{border-color:var(--blue);color:var(--blue);background:#f4f8ff}
+
+  /* ---------- 南方制药官网（浅绿医疗企业风，与检索页、大学页明显区分） ---------- */
+  #viewCorp{--corp-deep:#0b5d4b;--corp-green:#0f7a63;--corp-cyan:#17a2a0;--corp-mint:#f1faf6;--corp-line:#d8ece4;background:#fff}
+  .corp-topbar{background:#fff;border-bottom:2px solid var(--corp-green)}
+  .corp-topbar-inner{max-width:1120px;margin:0 auto;padding:12px 16px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+  .corp-brand{display:flex;align-items:center;gap:11px}
+  .corp-mark{width:46px;height:46px;flex:0 0 46px;border-radius:12px;background:var(--corp-green);display:flex;align-items:center;justify-content:center;color:#fff}
+  .corp-brand .name{font-size:21px;font-weight:800;letter-spacing:3px;color:var(--corp-deep)}
+  .corp-brand .en{display:block;font-size:9px;letter-spacing:2.4px;color:#6d9d90;margin-top:2px;text-transform:uppercase}
+  .corp-nav{display:flex;flex-wrap:wrap;gap:4px;margin-left:8px}
+  .corp-nav button{background:#f2f7f5;border:0;border-radius:999px;color:#3f6358;font-size:14px;min-height:44px;padding:0 15px}
+  .corp-nav button:hover{background:#e2f2ec;color:var(--corp-deep)}
+  .corp-nav button.on{background:var(--corp-green);color:#fff;font-weight:700}
+  .corp-search{margin-left:auto;display:flex;align-items:stretch;gap:6px}
+  .corp-search input{width:200px;min-height:44px;border:1px solid #bcdcd1;border-radius:8px;padding:0 12px;font-size:14px;color:#123a30;outline:0;background:#fff}
+  .corp-search input:focus{border-color:var(--corp-green);box-shadow:0 0 0 3px rgba(15,122,99,.14)}
+  .corp-search input::placeholder{color:#9db8b0}
+  .corp-search-btn{min-height:44px;min-width:88px;border:0;border-radius:8px;background:var(--corp-green);color:#fff;font-size:14px;font-weight:600;padding:0 16px}
+  .corp-search-btn:hover{background:var(--corp-deep)}
+  .corp-hero{background:linear-gradient(118deg,#0f7a63 0%,#14a092 55%,#5cc8bd 100%);color:#fff}
+  .corp-hero-inner{max-width:1120px;margin:0 auto;padding:44px 16px 40px}
+  .corp-hero-kicker{margin:0 0 10px;font-size:12px;letter-spacing:4px;color:#cdf3ea}
+  .corp-hero h1{margin:0 0 12px;font-size:clamp(24px,4vw,36px);letter-spacing:2px;font-weight:800}
+  .corp-hero .hero-lead{margin:0;font-size:14px;color:#e7fbf6;line-height:1.9}
+  .corp-hero-tags{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .corp-hero-tags span{border:1px solid rgba(255,255,255,.55);border-radius:999px;padding:5px 14px;font-size:12px}
+  .corp-body{max-width:1120px;margin:0 auto;padding:24px 16px 56px;background:#fff}
+  .corp-bread{font-size:12px;color:#7c9c93;margin-bottom:18px}
+  .corp-cards{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);gap:18px;align-items:start}
+  .corp-card{background:#fff;border:1px solid var(--corp-line);border-radius:14px;padding:26px 28px;box-shadow:0 10px 24px rgba(15,122,99,.06)}
+  .corp-card h2{margin:0 0 14px;font-size:20px;color:var(--corp-deep);font-weight:700;border-left:5px solid var(--corp-cyan);padding-left:12px}
+  .corp-card h2 .en{font-size:11px;color:#8ab3a7;font-weight:500;margin-left:8px;letter-spacing:1px}
+  .lead-copy{font-size:15px;line-height:2;color:#35544c}
+  .corp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+  .corp-stat{background:var(--corp-mint);border-radius:10px;padding:14px 16px;border-left:4px solid var(--corp-cyan)}
+  .corp-stat .k{font-size:12px;color:#6d9d90;margin-bottom:6px}
+  .corp-stat .v{font-size:14px;color:#123a30;line-height:1.6}
+  .corp-side{display:grid;gap:14px}
+  .side-card{border:1px solid var(--corp-line);border-radius:14px;padding:18px 18px 20px;background:#fbfefd}
+  .side-card h3{margin:0 0 10px;font-size:14px;color:var(--corp-deep);letter-spacing:1px}
+  .side-list{list-style:none;margin:0;padding:0}
+  .side-list li{padding:9px 0;border-bottom:1px dashed var(--corp-line);font-size:13px;color:#456b61;line-height:1.7}
+  .side-list li:last-child{border-bottom:0}
+  .side-list time{display:block;font-size:11px;color:#93b3aa;margin-bottom:3px}
+  .corp-note{margin-top:18px;padding:12px 16px;background:#f6fbf9;border-left:3px solid var(--corp-line);color:#7d9a92;font-size:12px;line-height:1.8;border-radius:0 8px 8px 0}
+  .corp-footer{background:var(--corp-deep);color:#c9e6dd;padding:22px 16px;text-align:center;font-size:11px;line-height:1.9}
+  .search-msg{display:none;margin:0 0 16px;padding:12px 16px;background:#fff7ec;border:1px solid #f2d9b0;border-radius:10px;color:#8a5a1a;font-size:14px;line-height:1.8}
+  .search-msg.show{display:block}
+
+  /* 官网中央提示栏 */
+  .hint-veil{position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;background:rgba(8,38,31,.55);padding:20px}
+  .hint-card{width:100%;max-width:450px;background:#fff;border-radius:16px;border-top:6px solid var(--corp-green,#0f7a63);box-shadow:0 18px 50px rgba(6,40,32,.28);padding:28px 26px 24px;text-align:center;animation:veilIn .3s ease both}
+  .hint-ico{width:54px;height:54px;margin:0 auto 14px;border-radius:50%;background:#e7f6f1;color:#0f7a63;display:flex;align-items:center;justify-content:center}
+  .hint-card h3{margin:0 0 10px;font-size:18px;color:#0b5d4b;line-height:1.6}
+  .hint-card p{margin:0 0 20px;font-size:13px;color:#5d7f76;line-height:1.9}
+  .hint-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .hint-btn{min-height:44px;padding:0 20px;border-radius:999px;font-size:14px;font-weight:600;border:0}
+  .hint-btn.primary{background:#0f7a63;color:#fff}
+  .hint-btn.primary:hover{background:#0b5d4b}
+  .hint-btn.ghost{background:#fff;color:#0f7a63;border:1px solid #9fd0c2}
+
+  /* ---------- 游港大学 · 教授页 ---------- */
+  .uni-bar{background:#26364d;color:#fff;box-shadow:0 2px 6px rgba(38,54,77,.15)}
+  .uni-head{max-width:1120px;margin:0 auto;padding:15px 16px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+  .uni-brand{display:flex;align-items:center;gap:10px}
+  .ginkgo-badge{width:42px;height:42px;flex:0 0 42px;color:#e4b84c}
+  .uni-brand .nm{font-size:21px;font-weight:700;letter-spacing:3px}
+  .uni-brand .en{display:block;font-size:9px;color:#aebfcf;letter-spacing:2.5px;margin-top:3px}
+  .uni-nav{display:flex;flex-wrap:wrap;gap:0}
+  .uni-nav button{background:transparent;border:0;color:#c6d2de;min-height:44px;padding:0 13px;font-size:14px}
+  .uni-nav button:hover{color:#fff;text-decoration:underline}
+  .prof-crumb{max-width:1040px;margin:0 auto;padding:22px 16px 0;font-size:13px;color:#7c8794}
+  .prof-crumb a,.prof-crumb button{color:#315e86}
+  .prof-layout{max-width:1040px;margin:0 auto;padding:18px 16px 60px;display:grid;grid-template-columns:290px 1fr;gap:26px;align-items:start}
+  .prof-aside{background:#fbfcfe;border:1px solid var(--line);border-radius:10px;padding:20px;position:sticky;top:18px}
+  .prof-photo{margin:0 0 18px}
+  .prof-photo .frame{
+    position:relative;aspect-ratio:4/5;border-radius:10px;overflow:hidden;border:1px solid #d5dde7;
+    background:#eef2f6;box-shadow:0 6px 18px rgba(38,54,77,.12);
+  }
+  .prof-photo .frame svg,.prof-photo .frame img{display:block;width:100%;height:100%;object-fit:cover}
+  .prof-photo .frame .photo-fallback{position:absolute;inset:0}
+  .prof-photo .frame img{position:absolute;inset:0;z-index:1}
+  .prof-photo figcaption{margin-top:10px;font-size:12px;color:#7c8794;line-height:1.7;text-align:center}
+  .info-list{list-style:none;margin:0;padding:0;font-size:13px;color:#3d4755;line-height:1.9}
+  .info-list li{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line-soft)}
+  .info-list li:last-child{border-bottom:0}
+  .info-list .k{flex:0 0 64px;color:#8793a0;font-size:12px}
+  .info-list .v{flex:1;word-break:break-all}
+  .prof-main h1{margin:0 0 4px;font-size:28px;color:#1e2a3b}
+  .prof-main .sub{font-size:14px;color:#7c8794;margin-bottom:14px;letter-spacing:.5px}
+  .prof-tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+  .prof-tags span{background:#eef3f9;color:#33516f;border-radius:999px;padding:4px 12px;font-size:12px}
+  .sec-title{display:flex;align-items:center;gap:9px;font-size:18px;color:#26364d;margin:24px 0 10px;font-weight:700}
+  .sec-title::before{content:"";width:4px;height:18px;background:#e4b84c;border-radius:2px}
+  .sec-body{font-size:14px;line-height:2;color:#3d4755;margin:0}
+  .sec-list{margin:0;padding:0;list-style:none}
+  .sec-list li{position:relative;padding:4px 0 4px 18px;font-size:14px;line-height:1.9;color:#3d4755}
+  .sec-list li::before{content:"";position:absolute;left:3px;top:13px;width:5px;height:5px;background:#e4b84c;border-radius:50%}
+  .callout{
+    margin-top:20px;padding:15px 18px;background:#fdf8ec;border:1px solid #ead9ab;border-radius:8px;
+    font-size:14px;line-height:1.9;color:#4f4223;
+  }
+  .callout b{color:#7a5b16}
+  .uni-footer{background:#26364d;color:#b9c6d3;padding:22px 16px;text-align:center;font-size:11px;line-height:1.9}
+
+  /* ---------- 提示 Toast ---------- */
+  #toast{
+    position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(16px);
+    background:rgba(26,26,46,.94);color:#fff;font-size:14px;line-height:1.6;
+    padding:11px 18px;border-radius:10px;opacity:0;pointer-events:none;
+    transition:opacity .2s ease,transform .2s ease;z-index:200;max-width:min(92vw,520px);text-align:center;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ---------- 剧情退出遮罩 ---------- */
+  .veil{
+    position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;
+    background:rgba(8,10,22,.78);padding:26px;
+  }
+  .veil-inner{animation:veilIn .45s ease both}
+  @keyframes veilIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}
+  .exit-card{max-width:560px;width:100%;background:#fdfaf2;border-radius:16px;padding:38px 30px 32px;text-align:center;box-shadow:0 16px 60px rgba(0,0,0,.35)}
+  .exit-card .t1{font-size:24px;font-weight:700;color:#26364d;letter-spacing:1px;margin:0 0 10px}
+  .exit-card .t2{font-size:14px;color:#7c8794;margin:0 0 22px;line-height:1.9}
+  .exit-actions{display:flex;justify-content:center;margin:4px 0 6px}
+  .exit-confirm{
+    min-height:54px;padding:0 34px;border:0;border-radius:999px;background:var(--blue);color:#fff;
+    font-size:17px;font-weight:700;letter-spacing:.5px;box-shadow:0 6px 18px rgba(45,127,249,.35);
+  }
+  .exit-confirm:hover{background:var(--blue-deep)}
+  .exit-confirm:active{transform:translateY(1px)}
+  .exit-confirm:focus-visible{outline:3px solid #9cc4ff;outline-offset:3px}
+  .exit-stamp{margin-top:20px;font-size:11px;color:#a79f8c;letter-spacing:1px}
+
+  /* 演示用“已关闭”卡（视觉小说引擎中由引擎隐藏 WebView） */
+  .closed-card{max-width:520px;width:100%;background:#fff;border-radius:16px;padding:36px 28px;text-align:center;box-shadow:0 16px 60px rgba(0,0,0,.3)}
+  .closed-card h2{font-size:21px;margin:0 0 8px;color:var(--ink)}
+  .closed-card p{font-size:14px;color:var(--gray);margin:0 0 20px;line-height:1.8}
+  .closed-card .flags{display:flex;gap:10px;justify-content:center;margin-bottom:22px;font-size:12px;color:#8793a0}
+  .closed-card .flags span{border:1px solid var(--line);padding:4px 10px;border-radius:999px}
+  .closed-card .flags .ok{color:var(--green);border-color:#a7d3b5;background:#f0f9f3}
+  .demo-btn{border:0;background:var(--blue);color:#fff;font-size:15px;font-weight:600;min-height:46px;padding:0 22px;border-radius:999px}
+  .demo-btn:hover{background:var(--blue-deep)}
+  .demo-btn.ghost{background:#fff;color:var(--blue);border:1px solid var(--blue);margin-left:10px}
+
+  /* ---------- 演示角标 ---------- */
+  #demoBadge{
+    position:fixed;right:14px;bottom:14px;z-index:90;background:#eef2f8;color:#5b6b80;
+    font-size:11px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);
+  }
+
+  /* ---------- 移动端适配（竖屏 / 窄屏） ---------- */
+  @media (max-width:700px){
+    .mast-inner{padding:8px 10px}
+    .mast-inner .brand{width:100%;justify-content:space-between;min-height:34px;padding-top:4px}
+    .brand .beta{order:3}
+    .brand .ja{margin-left:auto;order:2}
+    .mast-inner .searchform{max-width:none;min-width:0;flex:1 1 100%}
+    .searchbox input{min-height:46px;font-size:16px}
+    .btn-search{min-width:76px;min-height:46px;padding:0 14px;font-size:15px}
+    .top-actions{display:none}
+    #viewHome{min-height:82vh;padding:34px 14px 70px}
+    .hero-word{font-size:38px}
+    .homeform .searchbox input{min-height:48px;font-size:16px}
+    .homeform .btn-search{min-width:92px;min-height:46px;font-size:16px}
+    .b-title{font-size:16px}
+    .js-back{min-height:48px;padding:0 18px;font-size:16px;gap:6px}
+    .js-back .arr{font-size:20px}
+    .back-row{padding:8px 12px}
+    .exit-confirm{min-height:50px;padding:0 24px;font-size:16px;width:100%;max-width:280px}
+    .corp-topbar-inner,.uni-head{flex-direction:column;align-items:flex-start;gap:10px}
+    .corp-nav{width:100%;overflow-x:auto;flex-wrap:nowrap;margin-left:0}
+    .corp-nav button{white-space:nowrap}
+    .corp-search{margin-left:0;width:100%}
+    .corp-search input{flex:1;width:auto;min-width:0}
+    .corp-cards{grid-template-columns:1fr}
+    .corp-grid{grid-template-columns:1fr}
+    .corp-hero-inner{padding:30px 16px 28px}
+    .prof-layout{grid-template-columns:1fr;gap:16px}
+    .prof-aside{position:static}
+    .uni-nav{width:100%;overflow-x:auto;flex-wrap:nowrap}
+    .uni-nav button{white-space:nowrap}
+  }
+  @media (max-width:420px){
+    .corp-brand .name{font-size:20px}
+    .corp-card{padding:20px 16px}
+    .exit-card{padding:30px 20px 26px}
+  }
+</style>
+</head>
+<body data-view="home">
+
+<!-- ======== 结果页顶栏 Mast ======== -->
+<header id="topMast">
+  <div class="mast-accent"></div>
+  <div class="mast-inner">
+    <a class="brand" href="javascript:void(0)" data-nav-home title="返回首页">
+      <span class="word">Mogul<i> Search</i></span>
+      <span class="ja">猫眼搜索</span>
+      <span class="beta">β since 2009</span>
+      <span class="beta">分别搜索“柏村摩智子”“南方制药”和“峰岸诚”看看吧</span>
+    </a>
+    <form class="searchform js-main-search" role="search">
+      <div class="searchbox">
+        <span class="search-ic" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+        </span>
+        <input id="mastQuery" type="search" autocomplete="off" enterkeyhint="search" aria-label="搜索关键词" placeholder="输入关键词进行搜索">
+        <button class="btn-search" type="submit">搜索</button>
+      </div>
+    </form>
+    <div class="top-actions">
+      <button type="button" data-flavor>设为首页</button>
+      <button type="button" data-flavor>收藏 Mogul Search</button>
+    </div>
+  </div>
+</header>
+
+<main id="app">
+  <!-- ======== 视图：主搜索页（初始） ======== -->
+  <section id="viewHome" class="view" aria-label="Mogul Search 首页">
+    <div class="hero-logo">
+      <div class="hero-eyeball">
+        <span class="hero-cat" aria-hidden="true">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2d7ff9" stroke-width="1.8" stroke-linecap="round">
+            <circle cx="11.5" cy="11.5" r="7"/>
+            <path d="m20.2 20.2-3.4-3.4"/>
+            <path d="M8.2 9.5c.8-.9 1.6-1.3 2.6-1.2M13.4 10.8c.1-.4.4-.7.9-.9" stroke-width="1.2"/>
+          </svg>
+        </span>
+        <div class="hero-word">Mogul<i> Search</i></div>
+      </div>
+      <div class="hero-ja">猫眼搜索</div>
+      <div class="hero-meta"><b>β</b> since 2009 — 剧情内预设检索页</div>
+     <div class="hero-meta"> 分别搜索“柏村摩智子”“南方制药”和“峰岸诚”看看吧</div>
+    </div>
+    <form class="searchform homeform js-main-search" role="search">
+      <div class="searchbox">
+        <span class="search-ic" aria-hidden="true">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+        </span>
+        <input id="homeQuery" type="search" autocomplete="off" enterkeyhint="search" aria-label="搜索关键词" placeholder="输入关键词进行搜索">
+        <button class="btn-search" type="submit">搜索</button>
+      </div>
+    </form>
+    <p class="home-hint dev-note">本页为游戏内虚构界面 · 检索内容均为预设脚本，不连接真实互联网</p>
+  </section>
+
+  <!-- ======== 视图：搜索结果 ======== -->
+  <section id="viewResults" class="view" aria-label="搜索结果">
+    <div class="results-wrap">
+      <div class="results-topbar">
+        <button type="button" class="js-back" data-back-home>
+          <span class="arr" aria-hidden="true">‹</span> 返回搜索首页
+        </button>
+      </div>
+
+      <div id="loadingBlock" class="loading-panel is-hidden" role="status" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span>正在检索“<b id="loadingQuery"></b>”…</span>
+      </div>
+
+      <div id="resultsBlock" class="is-hidden">
+        <p class="result-meta" id="resultMeta"></p>
+        <ol class="b-list" id="resultList"></ol>
+        <nav class="pager is-hidden" id="pageNav" aria-label="分页">
+          <button type="button" disabled>‹ 上一页</button>
+          <button type="button" class="cur" disabled>1</button>
+          <button type="button" disabled>2</button>
+          <button type="button" disabled>3</button>
+          <button type="button" disabled>4</button>
+          <button type="button" disabled>5</button>
+          <button type="button" data-pager>下一页 ›</button>
+        </nav>
+      </div>
+
+      <div id="errorBlock" class="error-panel is-hidden" role="alert">
+        <div class="error-ic" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5"/><path d="M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg>
+        </div>
+        <h2>搜索出现异常，请稍后重试。</h2>
+        <p>该关键词暂无法检索。<br>页面将于 <b class="error-timer" id="errorCount">2</b> 秒后自动返回主搜索页。</p>
+        <button type="button" class="linkish" id="errorBack" style="font-size:13px;color:#8a8fa3">立即返回检索页</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 子页面 1：南方制药官网 ======== -->
+  <section id="viewCorp" class="subpage view" aria-label="南方制药官方网站">
+    <div class="back-row">
+      <button type="button" class="js-back" data-back-to-results>
+        <span class="arr" aria-hidden="true">‹</span> 返回搜索结果
+      </button>
+    </div>
+
+    <div class="corp-topbar">
+      <div class="corp-topbar-inner">
+        <div class="corp-brand">
+          <span class="corp-mark" aria-hidden="true">
+            <svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+              <path d="M32 10v13"/>
+              <path d="M32 23c-8 4.4-11 9-10 14.6"/>
+              <path d="M32 23c8 4.4 11 9 10 14.6"/>
+              <path d="M22 37.6h20"/>
+              <path d="M22 37.6c-2.2 5-.7 10 3.2 13.6"/>
+              <path d="M42 37.6c2.2 5 .7 10-3.2 13.6"/>
+              <circle cx="32" cy="10" r="4.6" fill="currentColor" stroke="none"/>
+              <circle cx="17.4" cy="48.6" r="3.4" fill="currentColor" stroke="none"/>
+              <circle cx="46.6" cy="48.6" r="3.4" fill="currentColor" stroke="none"/>
+            </svg>
+          </span>
+          <div>
+            <div class="name">南方制药</div>
+            <span class="en">Southern Pharma Co., Ltd.</span>
+          </div>
+        </div>
+        <nav class="corp-nav" aria-label="站点导航">
+          <button type="button" class="on">首页</button>
+          <button type="button" data-flavor>企业概况</button>
+          <button type="button" data-flavor>研究领域</button>
+          <button type="button" data-flavor>新闻中心</button>
+          <button type="button" data-flavor>联系我们</button>
+        </nav>
+        <form class="corp-search" id="corpSearchForm" role="search" aria-label="站内搜索">
+          <input id="corpQuery" type="search" autocomplete="off" enterkeyhint="search" aria-label="站内搜索关键词" placeholder="站内搜索">
+          <button class="corp-search-btn" type="submit">搜索</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="corp-hero">
+      <div class="corp-hero-inner">
+        <p class="corp-hero-kicker">SINCE 1987 · HEALTH &amp; RESEARCH</p>
+        <h1>以研究回应生命的需要</h1>
+        <p class="hero-lead">南方制药株式会社 · 新药研发 ／ 健康食品 ／ 医疗相关产品</p>
+        <div class="corp-hero-tags"><span>新药研发</span><span>产学研合作</span><span>品质与安全</span></div>
+      </div>
+    </div>
+
+    <div class="corp-body">
+      <p class="corp-bread">首页 <span aria-hidden="true">›</span> 企业简介</p>
+      <div id="corpSearchMsg" class="search-msg" role="status" aria-live="polite"></div>
+
+      <div class="corp-cards">
+        <section class="corp-card">
+          <h2>企业简介<span class="en">COMPANY PROFILE</span></h2>
+          <p class="lead-copy">
+            南方制药株式会社创立于1987年，是一家以“致力于人类健康事业的创新型企业”为理念的制药企业。
+            公司主营新药研发与健康食品，并积极拓展医疗相关产品领域，长期与国内外学术机构开展产学研合作，
+            稳步将基础研究成果转化为面向患者的可靠产品。
+          </p>
+          <div class="corp-grid">
+            <div class="corp-stat"><div class="k">设立</div><div class="v">1987 年</div></div>
+            <div class="corp-stat"><div class="k">事业内容</div><div class="v">新药研发 ／ 健康食品 ／ 医疗相关产品</div></div>
+            <div class="corp-stat"><div class="k">合作方向</div><div class="v">与大学及研究机构共同推进新药与基础药理研究</div></div>
+          </div>
+        </section>
+
+        <aside class="corp-side">
+          <div class="side-card">
+            <h3>最新动态</h3>
+            <ul class="side-list">
+              <li><time>2026-08-21</time>新药研发中心夏季研究发表会顺利举行，来自合作院校的研究生参加了成果交流。</li>
+              <li><time>2026-07-02</time>欢迎新入社研究员。公司与本地大学持续推进的联合研究项目将迎来新一批成员。</li>
+            </ul>
+          </div>
+          <div class="side-card">
+            <h3>研究领域</h3>
+            <ul class="side-list">
+              <li>化学药品与新药研发</li>
+              <li>健康食品与营养研究</li>
+              <li>医疗相关产品的制造与品质管理</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+
+      <div class="corp-note dev-note">※ 本页面为剧情内预设内容；所载企业信息为虚构设定，与真实机构无关。</div>
+    </div>
+
+    <footer class="corp-footer">
+      © 2026 Southern Pharma Co., Ltd.
+      <div class="dev-note" style="margin-top:4px">本网站为游戏剧情预设页面（剧情内虚构企业）</div>
+    </footer>
+
+    <div id="corpHint" class="hint-veil is-hidden" role="dialog" aria-modal="true" aria-labelledby="corpHintTitle">
+      <div class="hint-card">
+        <div class="hint-ico" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+        </div>
+        <h3 id="corpHintTitle">请在站内搜索栏中搜索“柏村摩智子”</h3>
+        <p>试试页面顶部的站内搜索框：输入关键词后点击“搜索”，看看公司资料里有没有相关记录。</p>
+        <div class="hint-actions">
+          <button type="button" class="hint-btn primary" id="corpHintGo">好，去搜索</button>
+          <button type="button" class="hint-btn ghost" id="corpHintClose">稍后再说</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== 子页面 2：峰岸诚 · 游港大学教授页 ======== -->
+  <section id="viewProf" class="subpage view" aria-label="峰岸诚 个人介绍页">
+    <div class="back-row" style="max-width:1040px">
+      <button type="button" class="js-back" data-back-to-results>
+        <span class="arr" aria-hidden="true">‹</span> 返回搜索结果
+      </button>
+    </div>
+
+    <header class="uni-bar">
+      <div class="uni-head">
+        <div class="uni-brand">
+          <svg class="ginkgo-badge" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+            <path d="M32 58V22"/>
+            <path d="M32 20c-2.8-3.4-6.8-4.4-9.6-3 1 4.6-.4 9-3 13.6 6.4 1.8 10 6.4 12.6 12.4 2.6-6 6.2-10.6 12.6-12.4-2.6-4.6-4-9-3-13.6-2.8-1.4-6.8-.4-9.6 3Z" fill="#f9edcd" stroke-width="2"/>
+            <path d="M32 30v12M27 34c2 2.6 3.4 5.4 4.2 8.4M37 34c-2 2.6-3.4 5.4-4.2 8.4" stroke-width="1.6"/>
+          </svg>
+          <div>
+            <span class="nm">游港大学</span>
+            <span class="en">YUKOU UNIVERSITY</span>
+          </div>
+        </div>
+        <nav class="uni-nav" aria-label="大学导航">
+          <button type="button">首页</button>
+          <button type="button" data-flavor>大学介绍</button>
+          <button type="button" data-flavor>院系设置</button>
+          <button type="button" data-flavor>学术研究</button>
+          <button type="button" data-flavor>入学资讯</button>
+        </nav>
+      </div>
+    </header>
+
+    <div class="prof-crumb">游港大学 <span aria-hidden="true">›</span> 药学部 <span aria-hidden="true">›</span> 教员介绍 <span aria-hidden="true">›</span> 峰岸诚</div>
+
+
+    <div class="prof-layout">
+      <aside class="prof-aside">
+ 
+  
+        <figure class="prof-photo">
+          <div class="frame">
+            <!-- 兜底肖像：若 fa_search 照片缺失或加载失败，自动显示下面这张简笔肖像，不会只留下 alt 文字 -->
+            <svg class="photo-fallback" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" role="img" aria-label="峰岸诚 教授（占位肖像）">
+              <defs>
+                <linearGradient id="fbBg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#e8eef5"/><stop offset="1" stop-color="#ccd8e4"/>
+                </linearGradient>
+              </defs>
+              <rect width="400" height="500" fill="url(#fbBg)"/>
+              <circle cx="200" cy="196" r="84" fill="#a9b8c8"/>
+              <path d="M158 178c6-42 78-42 84 0 8 9 8 23-3 31-15 12-63 12-78 0-11-8-11-22-3-31Z" fill="#7d8ea1"/>
+              <path d="M200 300c-84 0-140 54-150 132-2 16-3 30-3 44h306c0-14-1-28-3-44-10-78-66-132-150-132Z" fill="#93a3b5"/>
+              <path d="M200 300c-20 0-38 5-54 13l54 96 54-96c-16-8-34-13-54-13Z" fill="#b9c6d4"/>
+            </svg>
+            <img src="../images/fa_search.png" alt="峰岸诚 教授" onerror="this.remove()">
+          </div>
+          <figcaption>峰岸诚 教授 · 游港大学 药学部<br>
+            <span class="dev-note"></span>
+          </figcaption>
+        </figure>
+        <ul class="info-list">
+          <li><span class="k">姓名</span><span class="v">峰岸诚<br><small style="color:#8a96a3">Minegishi Makoto</small></span></li>
+          <li><span class="k">职称</span><span class="v">药学部教授</span></li>
+          <li><span class="k">所属</span><span class="v">药学部 药理・感染症研究室</span></li>
+          <li><span class="k">邮箱</span><span class="v">m.shio@yukou-u.ac.jp</span></li>
+        </ul>
+      </aside>
+
+      <div class="prof-main">
+        <h1>峰岸诚</h1>
+        <div class="sub">峰岸 誠（みねぎし・まこと）／ 药学部教授</div>
+        <div class="prof-tags">
+          <span>校学术委员会成员</span>
+          <span>良镇生物医药学会常务理事</span>
+          <span>药理・感染症研究</span>
+        </div>
+
+        <div class="sec-title">研究介绍</div>
+        <p class="sec-body">
+          以感染症治疗为核心，主要研究抗生素、抗病毒药物及抗真菌药物的药理作用。
+          近年来关注耐药菌对策与药物在体内的动态变化，致力于连接基础研究与临床需求的课题。
+        </p>
+
+        <div class="sec-title">学术经历</div>
+        <ul class="sec-list">
+          <li>东京大学医学部毕业。</li>
+          <li>现任游港大学药学部教授、校学术委员会成员。</li>
+          <li>兼任良镇生物医药学会常务理事，在国内外学术期刊发表多篇论文。</li>
+          <li>长期承担药理学课程与研究生指导，重视从分子层面理解药物的作用机制。</li>
+        </ul>
+
+        <div class="callout">
+          <b>指导学生</b>：截至2026年，由峰岸教授指导的多名学生毕业后进入本地头部企业
+          <b>南方制药</b>，担任新药研发等相关研究工作。
+        </div>
+      </div>
+    </div>
+
+    <footer class="uni-footer">
+      游港大学 · 教员介绍
+      <div style="margin-top:4px">© 2026 Yukou University</div>
+      <div class="dev-note" style="margin-top:4px">（剧情内虚构大学 · 页面为剧情预设内容）</div>
+    </footer>
+  </section>
+</main>
+
+<!-- ======== Mogul 页脚 ======== -->
+<footer class="app-footer">
+  <div class="links">
+    <button type="button" data-flavor>关于 Mogul Search</button>
+    <button type="button" data-flavor>隐私声明</button>
+    <button type="button" data-flavor>使用条款</button>
+  </div>
+  <div>© 2026 Mogul Search · 猫眼搜索</div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="demoBadge" class="is-hidden">演示原型</div>
+
+<!-- ======== 剧情过渡遮罩 ======== -->
+<div id="exitOverlay" class="veil is-hidden" role="dialog" aria-modal="true" aria-labelledby="exitTitle">
+  <div class="veil-inner">
+    <div class="exit-card">
+      <p class="t1" id="exitTitle">你已经找到了需要的线索。</p>
+      <p class="t2">检索记录已收集完毕。<br>确认后将离开搜索页面，返回故事主线。</p>
+      <div class="exit-actions">
+        <button type="button" class="exit-confirm" id="exitConfirm">确定，离开页面</button>
+      </div>
+      <div class="exit-stamp">— Mogul Search · 猫眼搜索 —</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== 演示关闭态（VN 引擎中可忽略） ======== -->
+<div id="closedOverlay" class="veil is-hidden" role="dialog" aria-modal="true">
+  <div class="veil-inner">
+    <div class="closed-card">
+      <h2>搜索页面已关闭</h2>
+      <p>视觉小说引擎已收到退出事件，可从此处继续主线剧情。<br><small style="color:#a7adbb">（当前为浏览器独立演示：退出事件已派发，页面模拟“被引擎关闭”。）</small></p>
+      <div class="flags">
+        <span id="closedFlagA" class="ok">A：已搜索柏村摩智子</span>
+        <span id="closedFlagB" class="ok">B：已查看峰岸诚个人页</span>
+      </div>
+      <button type="button" class="demo-btn" id="reopenDemo">重新打开检索页</button>
+      <button type="button" class="demo-btn ghost" id="resetDemo">重置进度并重开</button>
+    </div>
+  </div>
+</div>
+
+<!--成就系统：userStore 先行（分账号键名前缀），achieve.js 提供 VN.achieve-->
+<script src="../js/userStore.js"></script>
+<script src="../js/achieve.js"></script>
+
+<script>
+/* =====================================================================
+   《黑猫小夜曲》伪搜索引擎 · 预设逻辑与状态管理
+   ---------------------------------------------------------------------
+   关键词表（先于任何其他逻辑判断）：
+     "柏村摩智子" -> 垃圾结果页（5 条干扰信息，flags.A = true）
+     "南方制药"   -> 官方网站入口（可进入南方制药官网）
+     "峰岸诚"     -> 教授个人介绍入口（可进入游港大学个人页）
+     其余关键词   -> 剧情化报错，2 秒后自动回首页并清空输入
+   ===================================================================== */
+'use strict';
+
+/* ---------- 可配置项（视觉小说引擎接入时覆盖 CONFIG 即可） ---------- */
+const CONFIG = {
+  loadingMs: 720,          // 0.5~1 秒模拟加载
+  errorMs: 2000,           // 报错停留时长
+  standalone: true,        // 浏览器独立演示；嵌入引擎时设 false
+  persist: true,           // 是否把 A/B 标志写入 sessionStorage
+  scheme: null,            // 可选：引擎若用 URL Scheme 通信，填 "mogulsearch://"
+  exitUrl: 'about:blank'   // 玩家点“确定，离开页面”后跳转的目标；接游戏时改成 './hall.html' / '../index.html' 等
+};
+
+const QUERY_KEY = 'mogul-search-flags-v1';
+const KEY_JUNK = '柏村摩智子';
+const KEY_CORP = '南方制药';
+const KEY_PROF = '峰岸诚';
+
+/* ---------- 文案库（结果集中于此，便于叙事策划替换） ---------- */
+const JUNK_RESULTS = [
+  {
+    title: '柏村摩智子 - 第37届全国高中生作文大赛 入选',
+    desc: '来自北海道的高二学生柏村摩智子凭《我未来的梦想》入选，评委称赞其“表达富有感性”。',
+    url: 'www.edu-news.jp/.../37th_essay'
+  },
+  {
+    title: '地区志愿服务报道：柏村摩智子获表彰',
+    desc: '长期参与长野市社区清扫活动的柏村摩智子女士（68岁），近日获市长颁发感谢状。',
+    url: 'www.nagano-city.jp/.../volunteer'
+  },
+  {
+    title: '柏村摩智子 女士讣告（2019年）',
+    desc: '柏村摩智子女士（89岁）已辞世。守夜与告别仪式仅由亲属参加。',
+    url: 'www.obituary-news.jp/.../machiko'
+  },
+  {
+    title: '料理研究家柏村摩智子新书《我家的味道，那天的味道》',
+    desc: '以本地食材制作的食谱广受关注的柏村摩智子，推出备受期待的随笔集。',
+    url: 'www.gourmet-press.jp/.../machiko'
+  },
+  {
+    title: '柏村摩智子 | LinkedIn 个人资料',
+    desc: '柏村摩智子（市场／公关）｜东京都｜任职于 Digital Wave 株式会社。',
+    url: 'www.linkedin.com/.../machiko-kashimura'
+  }
+];
+
+const OFFICIAL_RESULT = {
+  title: '南方制药 - 官方企业网站',
+  desc: '南方制药株式会社成立于1987年，主营新药研发与健康食品，以“致力于人类健康事业的创新型企业”为宗旨。点击进入官方网站。',
+  url: 'www.southern-pharma.co.jp',
+  nav: 'corp'
+};
+
+const PROF_RESULT = {
+  title: '峰岸诚 - 游港大学 医学部教授',
+  desc: '峰岸诚教授，药学部教授，主要研究方向为抗生素、抗病毒药物及抗真菌药物的药理作用。点击查看完整个人介绍。',
+  url: 'www.yukou-u.ac.jp/faculty/minegishi-makoto',
+  nav: 'prof'
+};
+
+/* 峰岸诚的“正向新闻”结果：点击标题可就地展开正文（不跳转） */
+const PROF_NEWS = [
+  {
+    news: true,
+    title: '峰岸诚教授出席第68届感染症学会学术会议并发表演讲',
+    desc: '游港大学药学部峰岸诚教授受邀出席学术会议，就耐药菌对策与新型抗生素的药理研究发表演讲，现场反响热烈。',
+    url: 'www.yukou-u.ac.jp/news/2026/icc68-lecture',
+    body: '会议于本月在良镇国际会议中心举行。峰岸诚教授在题为《耐药菌时代的新型抗生素研究》的演讲中，介绍了团队近年来在药物作用机制解析方面的进展，并与来自国内外的研究者交换了意见。会议主办方表示，该研究“为基础研究与临床应用的衔接提供了重要思路”。'
+  },
+  {
+    news: true,
+    title: '游港大学峰岸诚教授团队研究成果发表于国际药理学期刊',
+    desc: '研究团队在抗真菌药物作用机制方面取得新进展，相关论文已刊登于国际学术期刊，受到业内关注。',
+    url: 'www.pharmacology-journal.org/.../minegishi-2026',
+    body: '该论文由峰岸诚教授团队撰写，围绕抗真菌药物的作用靶点与体内动态进行了系统研究。期刊编委评价称，研究“为相关药物的改良与安全性评估提供了有价值的数据”。'
+  },
+  {
+    news: true,
+    title: '峰岸诚教授荣获良镇生物医药学会年度学术奖',
+    desc: '凭借在抗病毒药物研究领域的长期积累，峰岸诚教授获颁年度学术奖，并受邀在颁奖典礼上致辞。',
+    url: 'www.ryochin-biomed.jp/.../award-2026',
+    body: '良镇生物医药学会在颁奖词中提到，峰岸诚教授多年来持续从事抗感染药物研究，并在人才培养方面倾注心力。峰岸教授在致辞中表示：“研究的意义，在于最终能回应患者的需要。”'
+  },
+  {
+    news: true,
+    title: '专访峰岸诚教授：从实验室到临床，抗生素研究的下一步',
+    desc: '峰岸教授在专访中谈到新药研发的挑战与希望，并寄语年轻研究者“把研究做在真正需要的地方”。',
+    url: 'www.med-interview.jp/.../minegishi',
+    body: '在访谈中，峰岸诚教授回顾了自己从东京大学医学部求学至今的研究历程，坦言新药研发“既需要耐心，也需要对临床现场的想象力”。他同时提到，很高兴看到自己指导的学生陆续进入制药企业，继续从事研发工作。'
+  },
+  {
+    news: true,
+    title: '游港大学药学部与南方制药联合研究项目启动',
+    desc: '由峰岸诚教授参与指导的联合研究项目正式启动，将围绕新型抗感染药物开展产学研合作。',
+    url: 'www.yukou-u.ac.jp/news/2026/joint-research-southern',
+    body: '该项目由游港大学药学部与南方制药共同推进，峰岸诚教授担任学术指导。项目计划在未来三年内，围绕新型抗感染药物的药理评价与安全性研究展开合作，并接收研究生参与课题。'
+  }
+];
+
+const RESULT_META = {
+  [KEY_JUNK]: '约 12,400 条结果（0.34 秒）',
+  [KEY_CORP]: '找到 1 条相关结果（0.18 秒）',
+  [KEY_PROF]: '找到 6 条相关结果（0.22 秒）'
+};
+
+/* ---------- DOM 快捷方法 ---------- */
+const $ = (sel, root) => (root || document).querySelector(sel);
+const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+
+/* ---------- 状态 ---------- */
+let flags = { A: false, B: false };
+let lastRootKey = null;     // 当前结果列表对应的关键词（用于子页面返回）
+let processing = false;
+let errorTimer = null;
+let exitTimer = null;
+let exitShown = false;
+let exitConfirmed = false;
+let toastTimer = null;
+let corpSearchDone = false;   // 玩家在官网用过一次站内搜索后，不再重复弹出提示栏
+
+function loadFlags(){
+  if (!CONFIG.persist) return { A:false, B:false };
+  try {
+    const raw = sessionStorage.getItem(QUERY_KEY);
+    if (!raw) return { A:false, B:false };
+    const obj = JSON.parse(raw);
+    return { A: !!obj.A, B: !!obj.B };
+  } catch(e) {
+    return { A:false, B:false };
+  }
+}
+function saveFlags(){
+  if (!CONFIG.persist) return;
+  try { sessionStorage.setItem(QUERY_KEY, JSON.stringify(flags)); } catch(e){ /* 忽略隐私模式错误 */ }
+}
+function setFlag(name, value){
+  flags[name] = value;
+  saveFlags();
+  document.body.dataset.mogulA = flags.A ? '1' : '0';
+  document.body.dataset.mogulB = flags.B ? '1' : '0';
+  document.dispatchEvent(new CustomEvent('mogulsearch:flagchange', { detail: Object.assign({}, flags), bubbles: true }));
+}
+
+/* ---------- 通用反馈 ---------- */
+let toastEl = $('#toast');
+function showToast(text, ms){
+  clearTimeout(toastTimer);
+  toastEl.textContent = text;
+  toastEl.classList.add('show');
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms || 2600);
+}
+
+function normalize(q){
+  return String(q || '').normalize('NFKC').replace(/\s+/g, '').trim();
+}
+
+/* ---------- 视图切换 ---------- */
+function showView(name, opts){
+  opts = opts || {};
+  clearTimeout(exitTimer);
+  exitTimer = null;
+  document.body.dataset.view = name;
+  window.scrollTo(0, 0);
+  if (opts.focus && (name === 'home' || name === 'results')) {
+    const input = name === 'home' ? $('#homeQuery') : $('#mastQuery');
+    if (input) input.focus();
+  }
+}
+
+function hideLoading(){
+  $('#loadingBlock').classList.add('is-hidden');
+}
+
+function goHome(clearInput){
+  showView('home');
+  ['homeQuery','mastQuery'].forEach(id => { if (clearInput !== false) $('#' + id).value = ''; });
+  hideLoading();
+  $('#errorBlock').classList.add('is-hidden');
+}
+
+/* ---------- 搜索主流程 ---------- */
+function bindSearchForms(){
+  $$('.js-main-search').forEach(form => {
+    form.addEventListener('submit', function(ev){
+      ev.preventDefault();
+      const input = $('input[type="search"]', form);
+      beginSearch(input && input.value);
+    });
+  });
+}
+
+function currentQueryInput(){
+  return document.body.dataset.view === 'home' ? $('#homeQuery') : $('#mastQuery');
+}
+
+function beginSearch(raw){
+  if (processing) return;
+  const q = normalize(raw);
+  const input = currentQueryInput();
+  if (!q) {
+    showToast('请输入要搜索的关键词。');
+    if (input) input.focus();
+    return;
+  }
+  if (input) input.value = raw.trim();
+
+  showView('results');
+  const loadingQuery = $('#loadingQuery');
+  loadingQuery.textContent = q;
+  $('#loadingBlock').classList.remove('is-hidden');
+  $('#resultsBlock').classList.add('is-hidden');
+  $('#errorBlock').classList.add('is-hidden');
+  $('#pageNav').classList.add('is-hidden');
+  processing = true;
+
+  setTimeout(() => {
+    processing = false;
+    $('#loadingBlock').classList.add('is-hidden');
+    dispatchSearch(q);
+  }, CONFIG.loadingMs);
+}
+
+function dispatchSearch(q){
+  clearTimeout(errorTimer);
+  if (q === KEY_JUNK) {
+    setFlag('A', true);
+    renderResults(KEY_JUNK);
+    scheduleExitIfComplete(2200);
+  } else if (q === KEY_CORP) {
+    renderResults(KEY_CORP);
+    scheduleExitIfComplete(2600);
+  } else if (q === KEY_PROF) {
+    renderResults(KEY_PROF);
+    scheduleExitIfComplete(2600);
+  } else {
+    showError(q);
+  }
+}
+
+/* ---------- 渲染结果 ---------- */
+function renderResults(key){
+  lastRootKey = key;
+  const input = currentQueryInput();
+  if (input) input.value = key;
+  $('#mastQuery').value = key;
+
+  const list = $('#resultList');
+  list.innerHTML = '';
+  const meta = $('#resultMeta');
+  meta.textContent = RESULT_META[key] || '';
+
+  const items = key === KEY_JUNK ? JUNK_RESULTS
+    : (key === KEY_CORP ? [OFFICIAL_RESULT] : [PROF_RESULT].concat(PROF_NEWS));
+
+  items.forEach((item, i) => {
+    const li = document.createElement('li');
+    li.className = 'b-item';
+
+    const title = document.createElement('h2');
+    title.className = 'b-title';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'linkish';
+    btn.textContent = item.title;
+    if (item.news) {
+      btn.setAttribute('data-news', '1');
+      btn.setAttribute('aria-expanded', 'false');
+      const cue = document.createElement('span');
+      cue.className = 'news-cue';
+      cue.textContent = '▾ 展开';
+      btn.appendChild(cue);
+    } else {
+      btn.setAttribute('data-nav', item.nav || 'junk');
+    }
+    title.appendChild(btn);
+
+    const desc = document.createElement('p');
+    desc.className = 'b-snippet';
+    desc.textContent = item.desc;
+
+    const url = document.createElement('div');
+    url.className = 'b-url';
+    const ic = document.createElement('span');
+    ic.className = 'b-favicon';
+    ic.setAttribute('aria-hidden', 'true');
+    ic.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M9 7h8v8"/></svg>';
+    const txt = document.createElement('span');
+    txt.textContent = item.url;
+    url.appendChild(ic);
+    url.appendChild(txt);
+
+    li.appendChild(title);
+    li.appendChild(desc);
+    if (item.body) {
+      const bodyEl = document.createElement('div');
+      bodyEl.className = 'b-news-body';
+      bodyEl.textContent = item.body;
+      li.appendChild(bodyEl);
+    }
+    li.appendChild(url);
+    list.appendChild(li);
+  });
+
+  $('#resultsBlock').classList.remove('is-hidden');
+  $('#pageNav').classList.toggle('is-hidden', key !== KEY_JUNK);
+}
+
+/* ---------- 报错返回 ---------- */
+function showError(q){
+  $('#resultsBlock').classList.add('is-hidden');
+  $('#errorBlock').classList.remove('is-hidden');
+  let count = 2;
+  $('#errorCount').textContent = String(count);
+  errorTimer = setInterval(() => {
+    count -= 1;
+    $('#errorCount').textContent = String(Math.max(count, 0));
+    if (count <= 0) {
+      clearInterval(errorTimer);
+      errorTimer = null;
+      goHome();
+    }
+  }, 1000);
+}
+
+/* ---------- 子页面 ---------- */
+function openCorp(){
+  cancelScheduledExit();
+  $('#corpQuery').value = '';
+  $('#corpSearchMsg').textContent = '';
+  $('#corpSearchMsg').classList.remove('show');
+  showView('corp');
+  if (!corpSearchDone) {
+    $('#corpHint').classList.remove('is-hidden');
+    const go = $('#corpHintGo');
+    if (go) setTimeout(() => go.focus(), 80);
+  }
+}
+
+function openProfile(){
+  cancelScheduledExit();
+  $('#corpHint').classList.add('is-hidden');
+  setFlag('B', true);
+  showView('prof');
+}
+
+function backToResults(){
+  $('#corpHint').classList.add('is-hidden');
+  showView('results');
+  if (lastRootKey) renderResults(lastRootKey);
+  scheduleExitIfComplete(1300);
+}
+
+/* ---------- 完成条件与退出 ---------- */
+function cancelScheduledExit(){
+  if (exitTimer) { clearTimeout(exitTimer); exitTimer = null; }
+}
+function scheduleExitIfComplete(delay){
+  cancelScheduledExit();
+  if (!flags.A || !flags.B || exitShown) return;
+  /* 两个线索（柏村摩智子 + 峰岸诚个人页）都已查到 → 最后一个查完的此刻
+     弹「天翼3G太快了」（重复检索因去重不会重复弹） */
+  if (window.VN && VN.achieve && typeof VN.achieve.unlock === 'function') {
+    try { VN.achieve.unlock('net3g'); } catch (eNet) {}
+  }
+  exitTimer = setTimeout(runExit, delay);
+}
+
+function runExit(){
+  if (exitShown) return;
+  exitShown = true;
+  updateClosedFlags();
+  $('#exitOverlay').classList.remove('is-hidden');
+  const btn = $('#exitConfirm');
+  if (btn) setTimeout(() => btn.focus(), 80);
+}
+
+/* 玩家点击“确定，离开页面”后才会真正退出：派发事件并跳转 */
+function confirmExit(){
+  if (exitConfirmed) return;
+  exitConfirmed = true;
+
+  const payload = Object.assign({ A: !!flags.A, B: !!flags.B }, CONFIG);
+  document.dispatchEvent(new CustomEvent('mogulsearch:exit', { detail: payload, bubbles: true }));
+
+  if (typeof window.MogulSearch === 'object' && typeof window.MogulSearch.onExit === 'function') {
+    try { window.MogulSearch.onExit(payload); } catch(e){}
+  }
+  if (CONFIG.scheme) {
+    try { location.href = CONFIG.scheme + 'exit?A=' + (flags.A?1:0) + '&B=' + (flags.B?1:0); return; } catch(e){}
+  }
+  if (CONFIG.exitUrl) {
+    try { location.href = CONFIG.exitUrl; return; } catch(e){}
+  }
+  // 未配置跳转目标：引擎模式直接收起遮罩由引擎接管；独立演示退回“已关闭”卡
+  $('#exitOverlay').classList.add('is-hidden');
+  if (!CONFIG.standalone) return;
+  $('#closedOverlay').classList.remove('is-hidden');
+}
+
+function updateClosedFlags(){
+  $('#closedFlagA').textContent = flags.A ? 'A：已搜索柏村摩智子' : 'A：未完成';
+  $('#closedFlagB').textContent = flags.B ? 'B：已查看峰岸诚个人页' : 'B：未完成';
+  $('#closedFlagA').classList.toggle('ok', !!flags.A);
+  $('#closedFlagB').classList.toggle('ok', !!flags.B);
+}
+
+function resetAll(){
+  clearTimeout(errorTimer);
+  cancelScheduledExit();
+  errorTimer = null;
+  exitShown = false;
+  exitConfirmed = false;
+  processing = false;
+  lastRootKey = null;
+  corpSearchDone = false;
+  flags = { A:false, B:false };
+  if (CONFIG.persist) {
+    try { sessionStorage.removeItem(QUERY_KEY); } catch(e){}
+  }
+  setFlag('A', false);
+  setFlag('B', false);
+  $('#exitOverlay').classList.add('is-hidden');
+  $('#closedOverlay').classList.add('is-hidden');
+  $('#corpHint').classList.add('is-hidden');
+  goHome();
+}
+
+/* ---------- 事件绑定 ---------- */
+document.addEventListener('click', function(ev){
+  const t = ev.target;
+
+  // 离开确认
+  if (t.closest('#exitConfirm')) { confirmExit(); return; }
+
+  // 官网中央提示栏
+  if (t.closest('#corpHintGo')) {
+    $('#corpHint').classList.add('is-hidden');
+    const input = $('#corpQuery');
+    if (input) input.focus();
+    return;
+  }
+  if (t.closest('#corpHintClose')) {
+    $('#corpHint').classList.add('is-hidden');
+    return;
+  }
+
+  // 可展开的新闻结果
+  const newsBtn = t.closest('.b-title .linkish[data-news]');
+  if (newsBtn) {
+    ev.preventDefault();
+    const item = newsBtn.closest('.b-item');
+    const bodyEl = item ? $('.b-news-body', item) : null;
+    if (bodyEl) {
+      const open = bodyEl.classList.toggle('open');
+      newsBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      const cue = $('.news-cue', newsBtn);
+      if (cue) cue.textContent = open ? '▴ 收起' : '▾ 展开';
+    }
+    return;
+  }
+
+  // 结果标题点击
+  const navBtn = t.closest('.b-title .linkish');
+  if (navBtn) {
+    ev.preventDefault();
+    const nav = navBtn.getAttribute('data-nav');
+    if (nav === 'corp') openCorp();
+    else if (nav === 'prof') openProfile();
+    else showToast('无法打开此网页：目标服务器无响应。');
+    return;
+  }
+
+  // 返回首页（Mogul 品牌）
+  const homeBtn = t.closest('[data-nav-home]');
+  if (homeBtn) { goHome(); return; }
+
+  // 结果页返回搜索首页
+  const homeBack = t.closest('[data-back-home]');
+  if (homeBack) { goHome(); return; }
+
+  // 子页面返回
+  const backBtn = t.closest('[data-back-to-results]');
+  if (backBtn) { backToResults(); return; }
+
+  // 装饰性导航 / 链接
+  const flavor = t.closest('[data-flavor]');
+  if (flavor) {
+    showToast('该栏目为剧情装饰内容，本次检索未收录对应页面。');
+    return;
+  }
+
+  // 分页装饰
+  const pager = t.closest('[data-pager]');
+  if (pager) { showToast('没有更多结果（剧情预设仅收录第 1 页）。'); return; }
+
+  // 立即返回
+  if (t.closest('#errorBack')) { goHome(); return; }
+});
+
+document.addEventListener('keydown', function(ev){
+  // Esc：子页面返回结果页；结果页回到初始页
+  if (ev.key === 'Escape') {
+    const exitVeil = $('#exitOverlay');
+    if (exitVeil && !exitVeil.classList.contains('is-hidden')) return; // 退出确认需玩家明确点击
+    const hint = $('#corpHint');
+    if (hint && !hint.classList.contains('is-hidden')) { hint.classList.add('is-hidden'); return; }
+    const view = document.body.dataset.view;
+    if (view === 'corp' || view === 'prof') backToResults();
+    else if (view === 'results') goHome();
+  }
+});
+
+/* ---------- 南方制药站内搜索 ---------- */
+$('#corpSearchForm').addEventListener('submit', function(ev){
+  ev.preventDefault();
+  const q = normalize($('#corpQuery').value);
+  if (!q) { showToast('请输入站内搜索关键词。'); return; }
+
+  corpSearchDone = true;
+  $('#corpHint').classList.add('is-hidden');
+  const msg = $('#corpSearchMsg');
+  msg.classList.add('show');
+  if (q.indexOf('柏村摩智子') !== -1) {
+    msg.textContent = '未找到与“柏村摩智子”相关的结果。请检查关键词是否有误。';
+  } else {
+    msg.textContent = '未找到相关结果。';
+  }
+});
+
+/* ---------- 演示关闭卡 ---------- */
+$('#reopenDemo').addEventListener('click', function(){
+  $('#closedOverlay').classList.add('is-hidden');
+  goHome();
+});
+$('#resetDemo').addEventListener('click', resetAll);
+
+/* ---------- 引擎接入参数（剧情页 goto 过来时带上） ----------
+   ?embed=1      嵌进游戏运行：隐藏独立演示标、加 vn-mode、点「确定，离开页面」直接回剧情
+                 （只看首字符：剧情页写的是 ?embed=1F，'1…' 都算嵌入；空 / '0…' 算独立演示）
+   ?exit=<地址>   自定义退出后跳转目标（默认 plot.html?save=vn_minigame_return，
+                 也就是 main.js 的 beginExit 写下的「小游戏返回点」）
+   例：mogul-search.html?embed=1
+   不带参数打开＝原来的独立演示模式，方便单独调试。
+
+   ★ 曾经的 bug：剧情页传的是 ?embed=1F，而这里要求「正好等于 '1'」，
+     于是嵌入参数整段被忽略 → standalone 仍为 true、exitUrl 仍是默认的
+     'about:blank'，玩家检索完点「确定，离开页面」就被丢到一个空白页，
+     回不了视觉小说。现在改为「存在且不以 0 开头即嵌入」，并对退出目标兜底。 */
+function applyEmbedParams(){
+  if (!location.search) return;
+  const p = new URLSearchParams(location.search);
+  const embed = String(p.get('embed') || '').trim();
+  if (!embed || embed.charAt(0) === '0') return;
+  CONFIG.standalone = false;
+  CONFIG.exitUrl = 'plot.html?save=vn_minigame_return';
+  const e = p.get('exit');
+  if (e) { try { CONFIG.exitUrl = decodeURIComponent(e); } catch (err) { CONFIG.exitUrl = e; } }
+  /* 兜底：退出目标不能是空 / about:blank，否则会跳空白页（上面那个 bug 的现象） */
+  if (!CONFIG.exitUrl || CONFIG.exitUrl === 'about:blank') {
+    CONFIG.exitUrl = 'plot.html?save=vn_minigame_return';
+  }
+}
+applyEmbedParams();
+
+/* ---------- 初始化 ---------- */
+flags = loadFlags();
+document.body.dataset.mogulA = flags.A ? '1' : '0';
+document.body.dataset.mogulB = flags.B ? '1' : '0';
+bindSearchForms();
+updateClosedFlags();
+
+if (!CONFIG.standalone) {
+  $('#demoBadge').classList.add('is-hidden');
+  document.body.classList.add('vn-mode');
+} else {
+  $('#demoBadge').classList.remove('is-hidden');
+}
+
+/* ---------- 对外 API（引擎轮询 / 外部重置用） ---------- */
+window.MogulSearch = {
+  config: CONFIG,
+  getFlags: function(){ return Object.assign({}, flags); },
+  getState: function(){ return Object.assign({}, flags); },
+  reset: resetAll,
+  close: confirmExit,
+  showExitPrompt: runExit,
+  setStandalone: function(v){
+    CONFIG.standalone = !!v;
+    $('#demoBadge').classList.toggle('is-hidden', !CONFIG.standalone);
+    document.body.classList.toggle('vn-mode', !CONFIG.standalone);
+  },
+  onExit: null,
+  goto: function(view){
+    if (view === 'corp') openCorp();
+    else if (view === 'prof') openProfile();
+    else goHome();
+  }
+};
+
+/* ---------- 开发/测试参数（?view=…&q=…&flags=A,B；剧情运行时不传则无效果） ---------- */
+function applyDebugParams(){
+  if (!location.search) return;
+  const p = new URLSearchParams(location.search);
+  const f = String(p.get('flags') || '').toUpperCase();
+  if (f.indexOf('A') !== -1) setFlag('A', true);
+  if (f.indexOf('B') !== -1) setFlag('B', true);
+  const v = String(p.get('view') || '');
+  if (v === 'results') {
+    const q = String(p.get('q') || '');
+    if (RESULT_META[q]) renderResults(q);
+    showView('results');
+  } else if (v === 'corp') {
+    openCorp();
+  } else if (v === 'prof') {
+    openProfile();
+  } else if (v === 'exit') {
+    $('#exitOverlay').classList.remove('is-hidden');
+  } else if (v === 'closed') {
+    updateClosedFlags();
+    $('#closedOverlay').classList.remove('is-hidden');
+  }
+}
+applyDebugParams();
+</script>
+
+<!--背景音乐：海底捞针（搜证/翻查线索时的曲子）-->
+<script>
+(function () {
+  'use strict';
+  var SRC = '../音乐/海底捞针.mp3';        /* 想换曲子改这里即可 */
+  var VOL_KEY = 'vn_bgm_volume';           /* 与游戏内音量滑条同一个键 */
+  var MUTE_KEY = 'vn_bgm_muted';
+
+  function readVolume() {
+    try {
+      var v = parseFloat(localStorage.getItem(VOL_KEY));
+      return isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.8;
+    } catch (e) { return 0.8; }
+  }
+  function readMuted() {
+    try { return localStorage.getItem(MUTE_KEY) === '1'; } catch (e) { return false; }
+  }
+  function log(m) { if (window.console && console.info) console.info('[Mogul BGM] ' + m); }
+
+  var volume = readVolume();
+  var muted = readMuted();
+  var audio = new Audio(SRC);
+  audio.loop = true;                       /* 海底捞针循环播放，直到玩家离开页面 */
+  audio.preload = 'auto';
+  audio.volume = muted ? 0 : volume;
+
+  /* 循环保险：正常靠 audio.loop（ended 不会触发）；万一 loop 被忽略，这里手动从头再放 */
+  audio.addEventListener('ended', function () {
+    try { audio.currentTime = 0; audio.play(); } catch (e) {}
+  });
+
+  var gestureArmed = false;
+  function armGesture(retry) {
+    if (gestureArmed) return;
+    gestureArmed = true;
+    var once = function () {
+      document.removeEventListener('pointerdown', once, true);
+      document.removeEventListener('keydown', once, true);
+      gestureArmed = false;
+      try { retry(); } catch (e) {}
+    };
+    document.addEventListener('pointerdown', once, true);
+    document.addEventListener('keydown', once, true);
+  }
+
+  function play() {
+    var p = audio.play();
+    if (p && typeof p.catch === 'function') {
+      p.catch(function () {
+        log('浏览器拦截了自动播放，将在首次点击/按键后重试');
+        armGesture(function () { audio.play(); });
+      });
+    }
+    log('播放：' + SRC + '（' + (audio.loop ? '循环' : '单次') +
+      '，音量 ' + Math.round((muted ? 0 : volume) * 100) + '%' +
+      (muted ? '，游戏内已静音' : '') + '）');
+  }
+
+  /* 离开页面（点「确定，离开页面」）时淡出，避免切页时被硬切 */
+  document.addEventListener('mogulsearch:exit', function () {
+    var t0 = Date.now();
+    var from = audio.volume;
+    var timer = setInterval(function () {
+      var k = Math.min(1, (Date.now() - t0) / 400);
+      try { audio.volume = from * (1 - k); } catch (e) {}
+      if (k >= 1) { clearInterval(timer); try { audio.pause(); } catch (e2) {} }
+    }, 40);
+  });
+
+  /* 音量随游戏滑条变化（同一标签页内切回来时也能同步） */
+  window.addEventListener('focus', function () {
+    volume = readVolume();
+    muted = readMuted();
+    try { audio.volume = muted ? 0 : volume; } catch (e) {}
+  });
+
+  play();
+})();
+</script>
+  <!-- 全屏设置：与设置页（外壳）联动，跨页保持全屏 -->
+  <script src="../js/fullscreenPref.js"></script>
+</body>
+</html>

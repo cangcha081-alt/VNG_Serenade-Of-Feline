@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黒猫小夜曲 · 主菜单</title>
+    <link rel="stylesheet" href="../css/hallstyle.css">
+</head>
+<body>
+    <main id="hall" >
+        <section id="hallLeft" aria-label="游戏标题">
+            <!-- 顶部：版本号 -->
+            <p id="version">V1.0 Team Feline</p>
+            <!-- 中部：标题 LOGO -->
+            <img
+                id="hallTitle"
+                src="../images/titlew.png"
+                alt="黒猫小夜曲"
+                draggable="false"
+            >
+
+            <!-- 底部：版权/出处 -->
+            <p id="credits">改编自知念实希人同名小说</p>
+        </section>
+
+        <!-- 右侧：bgday.png 铺底 + 缓慢左右抖动 + 5 个按钮 -->
+        <section id="hallRight" aria-label="菜单选项">
+            <div id="bgLayer" aria-hidden="true"></div>
+
+            <nav id="menuList" aria-label="主菜单">
+                <a href="loadPage.html" class="menuBtn" id="btnLoad">
+                    <span class="btnBody">
+                        <span class="btnTitle">读取存档</span>
+                        <span class="btnEn">Load</span>
+                    </span>
+                    <span class="btnArrow" aria-hidden="true">→</span>
+                </a>
+
+                <a href="plot.html" class="menuBtn" id="btnNew">
+                    <span class="btnBody">
+                        <span class="btnTitle">新的游戏</span>
+                        <span class="btnEn">New Game</span>
+                    </span>
+                    <span class="btnArrow" aria-hidden="true">→</span>
+                </a>
+
+                <a href="achievePage.html" class="menuBtn" id="btnAchieve">
+                    <span class="btnBody">
+                        <span class="btnTitle">成就系统</span>
+                        <span class="btnEn">Achievements</span>
+                    </span>
+                    <span class="btnArrow" aria-hidden="true">→</span>
+                </a>
+
+                <a href="settingPage.html" class="menuBtn" id="btnSetting">
+                    <span class="btnBody">
+                        <span class="btnTitle">设置</span>
+                        <span class="btnEn">Settings</span>
+                    </span>
+                    <span class="btnArrow" aria-hidden="true">→</span>
+                </a>
+
+                <a href="aboutPage.html" class="menuBtn" id="btnAbout">
+                    <span class="btnBody">
+                        <span class="btnTitle">关于我们</span>
+                        <span class="btnEn">About</span>
+                    </span>
+                    <span class="btnArrow" aria-hidden="true">→</span>
+                </a>
+            </nav>
+        </section>
+    </main>
+
+    <script src="../js/script.js"></script>
+    <!--背景音乐：黑猫的夜曲（音量沿用游戏内设置）-->
+    <script>window.PAGE_BGM = { src: '../音乐/黑猫的夜曲.mp3' };</script>
+    <script src="../js/pageBgm.js"></script>
+  <!-- 全屏设置：与设置页（外壳）联动，跨页保持全屏 -->
+  <script src="../js/fullscreenPref.js"></script>
+</body>
+</html>

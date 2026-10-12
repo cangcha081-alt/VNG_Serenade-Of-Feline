@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" >
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>设置 ｜ 黑猫小夜曲</title>
+<link rel="stylesheet" href="../css/settingPage.css">
+</head>
+<body>
+<!-- 固定灰蓝夜空 + 流星 -->
+<div class="bg-sky" aria-hidden="true">
+  <div class="meteor" style="left: 18%; animation-duration: 7.5s; animation-delay: 0s;"></div>
+  <div class="meteor" style="left: 42%; top: 6%; animation-duration: 9.5s; animation-delay: 3.2s;"></div>
+  <div class="meteor" style="left: 66%; animation-duration: 8.2s; animation-delay: 5.6s;"></div>
+  <div class="meteor" style="left: 84%; top: 12%; animation-duration: 10.5s; animation-delay: 1.8s;"></div>
+  <div class="meteor" style="left: 30%; top: 2%; animation-duration: 11s; animation-delay: 7.4s;"></div>
+  <div class="meteor" style="left: 8%;  top: 4%;  animation-duration: 8.8s;  animation-delay: 2.6s;  transform: scale(.8);"></div>
+  <div class="meteor" style="left: 52%; top: 14%; animation-duration: 9.8s;  animation-delay: 8.9s;  transform: scale(1.25);"></div>
+  <div class="meteor" style="left: 74%; top: 2%;  animation-duration: 7.8s;  animation-delay: 6.1s;"></div>
+  <div class="meteor" style="left: 92%; top: 8%;  animation-duration: 10.2s; animation-delay: 4.4s;  transform: scale(.85);"></div>
+  <div class="meteor" style="left: 24%; top: 10%; animation-duration: 9.2s;  animation-delay: 10.3s;"></div>
+  <div class="meteor" style="left: 60%; top: 18%; animation-duration: 8.5s;  animation-delay: 12.7s; transform: scale(1.15);"></div>
+  <div class="meteor" style="left: 38%; top: 0%;  animation-duration: 11.5s; animation-delay: 14.2s; transform: scale(.9);"></div>
+</div>
+<div class="wrap">
+  <div class="topbar" >
+    <h1>设 置<small>SETTINGS</small></h1>
+    <button type="button" class="btn-back" id="btnBack">← 返 回</button>
+  </div>
+
+  <!-- 文字速度 -->
+  <section class="card">
+    <h2>文字速度</h2>
+    <div class="row">
+      <label for="txtSpeed">打字速度</label>
+      <input type="range" id="txtSpeed" min="0" max="10" step="1" value="5">
+      <span class="val" id="txtSpeedVal">适中</span>
+    </div>
+    <div class="type-preview" id="typePreview"></div>
+    <p class="hint">拖到最右为「瞬间显示」。剧情、推理页面的文字速度都会应用此设置。</p>
+  </section>
+
+  <!-- 音量 -->
+  <section class="card">
+    <h2>音量调节</h2>
+    <div class="row">
+      <label for="volMaster">总音量</label>
+      <input type="range" id="volMaster" min="0" max="100" step="1" value="50">
+      <span class="val" id="volMasterVal">50%</span>
+    </div>
+    <div class="row">
+      <label for="volBgm" data-page-node-id="CVLhEgdU2RSBcnRf2zXpfa">背景音乐</label>
+      <input type="range" id="volBgm" min="0" max="100" step="1" value="50">
+      <span class="val" id="volBgmVal">50%</span>
+    </div>
+    <div class="row">
+      <label for="volSe">音效</label>
+      <input type="range" id="volSe" min="0" max="100" step="1" value="50">
+      <span class="val" id="volSeVal">50%</span>
+    </div>
+    <div class="row" style="padding-top:2px">
+      <button type="button" class="btn" id="seTest">▶ 试听音效</button>
+      <span class="hint" style="margin:0">实际音量 = 各自音量 × 总音量；点击「试听」可预览当前 SE 音量。</span>
+    </div>
+  </section>
+
+  <!-- 全屏 -->
+  <section>
+    <h2>画面</h2>
+    <div class="row">
+      <button type="button" class="btn" id="btnFull">进入全屏</button>
+      <span class="hint" style="margin:0" id="fullHint">对游戏所有界面生效：点「退出全屏」或按 Esc退出全屏。</span>
+    </div>
+  </section>
+
+  <!-- CG 鉴赏 -->
+  <section class="card">
+    <h2>CG 鉴赏</h2>
+    <p class="hint" style="margin-bottom:12px">只有已在剧情中解锁的 CG 可以回放。</p>
+    <div class="cg-grid" id="cgGrid"></div>
+  </section>
+
+  <!-- 退出登录 -->
+  <div class="logout-zone">
+    <button type="button" class="btn-logout" id="btnLogout">退 出 登 录</button>
+    <p class="hint">退出后将返回登录页；本账号的进度不会丢失。</p>
+  </div>
+</div>
+
+<!-- CG 回放浮层 -->
+<div class="cg-modal" id="cgModal" role="dialog" aria-modal="true">
+  <div class="box">
+    <video id="cgPlayer" controls playsinline></video>
+    <div class="bar">
+      <span id="cgModalTitle"></span>
+      <button type="button" class="btn" id="cgClose">关闭 ✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- 全屏外壳层：开启全屏后本页即常驻外壳，游戏所有页面都在此 iframe 中切换，
+     外壳（本页）持有的全屏不会因页内跳转而中断，直到玩家主动退出。 -->
+<iframe id="gameFrame" title="游戏画面" allow="autoplay"></iframe>
+
+<script src="../js/userStore.js"></script>
+<script>window.PAGE_BGM = { src: '../音乐/黑猫的夜曲.mp3', loop: true };</script>
+<script src="../js/pageBgm.js"></script>
+<script src="../js/settingPage.js"></script>
+</body>
+</html>

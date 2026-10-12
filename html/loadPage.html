@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>读取存档 · 黑猫小夜曲</title>
+  <!-- 与 hall 主菜单一致：直接复用 hall 的样式文件 -->
+  <link rel="stylesheet" href="../css/hallstyle.css" />
+  <link rel="stylesheet" href="../css/save.css" />
+</head>
+<body class="lp-body">
+  <!-- 返回主菜单 -->
+  <a class="backLink lp-back" href="hall.html">‹ 返回</a>
+
+  <main id="vnLoadPage">
+    <h1 class="lp-title">读取存档</h1>
+    <p class="lp-sub">Load Game</p>
+
+    <!-- 自动存档区：继续游戏按钮 -->
+    <section class="lp-block lp-auto">
+      <h2>自动存档</h2>
+      <div class="lp-auto-card" id="lpAutoCard">
+        <!-- 自动存档所在页面的画面缩略图（由 saveSystem.js 填入） -->
+        <div class="lp-auto-shot" id="lpAutoShot" aria-hidden="true"></div>
+        <p class="lp-auto-meta" id="lpAutoMeta">暂无自动存档：开始游戏后系统会自动记录进度</p>
+        <button type="button" class="menuBtn lp-auto-btn" id="lpBtnAuto" disabled>
+          <span class="btnBody">
+            <span class="lp-btn-title">继续游戏</span>
+            <span class="lp-btn-sub">Continue</span>
+          </span>
+          <span class="btnArrow" aria-hidden="true">→</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 手动存档区：6 个存档位按钮（点击可读取该存档） -->
+    <section class="lp-block">
+      <h2>手动存档</h2>
+      <div class="lp-grid" id="lpSlots"></div>
+    </section>
+  </main>
+
+  <!-- 与 hall 主菜单一致：直接复用 hall 的交互脚本（菜单按钮键盘导航） -->
+  <script src="../js/script.js"></script>
+  <!-- 分账号进度隔离：必须在 saveSystem.js 之前（存档键会据此加 u:<用户>: 前缀） -->
+  <script src="../js/userStore.js"></script>
+  <script src="../js/saveSystem.js"></script>
+  <!--背景音乐：与主菜单同款《黑猫的夜曲》（pageBgm 跨页续播，音量沿用游戏内设置）-->
+  <script>window.PAGE_BGM = { src: '../音乐/黑猫的夜曲.mp3', loop: true };</script>
+  <script src="../js/pageBgm.js"></script>
+  <script>
+  /* 返回来源页：?from= 指定（RPG 暂停菜单进入时带 rpgN.html）；RPG 来源加 ?resume=1
+     让 rpg.js 从 sessionStorage 恢复探索进度；其余来源回主菜单。 */
+  (function () {
+    var m = new RegExp('[?&]from=([^&]+)').exec(location.search || '');
+    var cand = m ? decodeURIComponent(m[1]) : '';
+    if (!cand && document.referrer) {
+      try { cand = new URL(document.referrer).pathname.split('/').pop(); } catch (e) {}
+    }
+    if (cand === 'rpg1.html' || cand === 'rpg2.html') {
+      var back = document.querySelector('.lp-back');
+      if (back) back.setAttribute('href', cand + '?resume=1');
+    }
+  })();
+  </script>
+</body>
+</html>

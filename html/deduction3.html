@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>黑猫小夜曲 · 线索栏</title>
+  <meta name="theme-color" content="#0a0812" />
+  <link rel="stylesheet" href="../css/main.css?v=20260917" />
+  <link rel="stylesheet" href="../css/deduction.css?v=20260917" />
+  <link rel="stylesheet" href="../css/deduction3.css?v=20260917" />
+  <link rel="stylesheet" href="../css/achieve.css" />
+</head>
+<body class="dc3">
+  <!--场景背景-->
+  <div class="vn-bg" id="vnBg" aria-hidden="true">
+    <img class="vn-bg__img" id="vnBgImg" alt="场景背景"
+         data-src="../images/backgrounds/scene-default.png" />
+    <div class="vn-bg__fx" aria-hidden="true"></div>
+  </div>
+
+  <!--线索栏：只保留 deduction 的物品栏部分，标题改为「线 索 栏」-->
+  <section class="dc-inv" id="dcInv" aria-hidden="true" hidden>
+    <div class="dc-inv__backdrop" aria-hidden="true"></div>
+
+    <div class="clue-board-container" role="dialog" aria-modal="true" aria-labelledby="dcInvTitle">
+      <!--顶部标题牌：跨在外框上沿-->
+      <div class="clue-header">
+        <h2 class="clue-board-title" id="dcInvTitle">线 索 栏</h2>
+      </div>
+
+      <!--问句框：每轮的句子由 deduction3.js 动态建 <p class="dialogue-box__text"> 并逐字打出-->
+      <div class="dialogue-box" id="dcInvAsk">
+        <span class="dialogue-box__hint" id="dcInvHint">按空格快进</span>
+      </div>
+
+      <!--线索区：10 张竖长条卡片，由 JS 生成（纯文字，无图片）-->
+      <div class="inventory-area">
+        <div class="inventory-grid" id="dcInvGrid"></div>
+      </div>
+
+      <!--底部操作区：先在卡片上点选线索，再点这里出示-->
+      <div class="action-area">
+        <button type="button" class="submit-btn" id="dcInvSubmit" disabled>出示线索</button>
+      </div>
+    </div>
+  </section>
+
+  <!--背景音乐：福尔摩斯（循环）。本页不加载 main.js，所以用页面音乐方案（pageBgm.js）→
+      音量/静音沿用游戏内设置（vn_bgm_volume / vn_bgm_muted），离开页面自动淡出。-->
+  <script src="../js/userStore.js"></script>
+  <script src="../js/achieve.js"></script>
+  <script>window.PAGE_BGM = { src: '../音乐/（罗曼圣诞探案集）福尔摩斯.mp3', loop: true };</script>
+  <script src="../js/pageBgm.js"></script>
+  <script src="../js/deduction3.js?v=20260917"></script>
+  <!-- 全屏设置：与设置页（外壳）联动，跨页保持全屏 -->
+  <script src="../js/fullscreenPref.js"></script>
+</body>
+</html>

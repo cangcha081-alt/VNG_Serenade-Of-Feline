@@ -1,0 +1,74 @@
+/* ============================================================
+   deduction3 · 线索栏
+   ------------------------------------------------------------
+   在 deduction.css 的基础上只改「卡片形态」：
+     · 10 张卡 = **单列 10 行**：每张是**横向长条**，沿垂直方向从上往下排
+     · 不使用图片（隐藏 .clue-bg），整条就是一句话
+   其它（外框、标题牌、问句框、按钮、选中/锁定/出示等状态）全部沿用 deduction.css。
+   想把卡片改回竖长条：把下面的 grid-template-columns 改成 repeat(5, …)、
+   grid-template-rows 改成 repeat(2, …) 即可。
+   ============================================================ */
+
+.dc3 .inventory-grid {
+  grid-template-columns: 1fr;                          /* 单列 */
+  grid-template-rows: repeat(10, minmax(30px, auto));   /* 10 行 → 横向长条逐行向下 */
+  grid-auto-rows: auto;
+  gap: clamp(4px, 0.6vh, 7px);                          /* 条间距压紧，10 条一屏可见 */
+  overflow-y: auto;                                     /* 屏幕偏矮时才滚动 */
+  overscroll-behavior: contain;
+  padding-right: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(178, 182, 189, 0.35) transparent;
+}
+.dc3 .inventory-grid::-webkit-scrollbar { width: 4px; }
+.dc3 .inventory-grid::-webkit-scrollbar-thumb { background: rgba(178, 182, 189, 0.35); }
+.dc3 .inventory-grid::-webkit-scrollbar-track { background: transparent; }
+
+/* 单张线索卡：横向长条——宽度撑满、高度由文字行数决定（长句通常正好一行） */
+.dc3 .clue-item {
+  aspect-ratio: auto;
+  width: 100%;
+  height: auto;
+  min-height: 30px;
+  max-width: 100%;
+  justify-self: stretch;
+  align-self: stretch;
+  justify-content: center;
+  padding: clamp(4px, 0.62vh, 8px) clamp(11px, 1.3vw, 18px);
+  overflow: hidden;
+}
+
+/* 不要图片层（无图时也免得露装饰底） */
+.dc3 .clue-bg { display: none; }
+
+/* 文字层：横向铺满，单/双行显示；太长时允许滚动 */
+.dc3 .clue-top {
+  height: auto;
+  align-items: center;
+}
+
+.dc3 .clue-name {
+  display: block;
+  width: 100%;
+  max-height: none;
+  font-size: clamp(11px, 1.45vh, 14px);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
+  overflow: visible;
+  padding-right: 0;
+}
+
+/* 选中态：整张卡描边变亮（文字卡没有背景图，靠描边和底色区分） */
+.dc3 .dc-inv.is-ready .clue-item.is-selected,
+.dc3 .clue-item.is-selected {
+  border-color: rgba(226, 216, 190, 0.72);
+  box-shadow: inset 0 0 18px rgba(217, 184, 127, 0.10), 0 0 14px rgba(217, 184, 127, 0.16);
+}
+
+/* 问句框：本轮可能有 3 段，给一点最小高度免得卡片区抖动 */
+.dc3 .dialogue-box {
+  min-height: clamp(84px, 13vh, 132px);
+}

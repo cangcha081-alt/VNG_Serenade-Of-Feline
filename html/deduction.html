@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>黑猫小夜曲 · 推理阶段</title>
+  <meta name="theme-color" content="#0a0812" />
+  <link rel="stylesheet" href="../css/main.css?v=20260916" />
+  <link rel="stylesheet" href="../css/deduction.css?v=20260916-2" />
+  <link rel="stylesheet" href="../css/achieve.css?v=20260916" />
+  <!-- 进入推理即作废菜单音乐断点：回主菜单时音乐从头播 -->
+  <script>try { localStorage.removeItem('vn_pagebgm_sync'); } catch (e) {}</script>
+</head>
+<body data-return-cg="CG1">
+  <!--场景背景-->
+  <div class="vn-bg" id="vnBg" aria-hidden="true">
+    <img class="vn-bg__img" id="vnBgImg" alt="场景背景"
+         data-src="../images/backgrounds/scene-default.png" />
+    <!--氛围层-->
+    <div class="vn-bg__fx" aria-hidden="true"></div>
+  </div>
+
+  <section class="vn-dialog is-hidden" id="vnDialog" aria-label="剧情对话框">
+    <div class="vn-dialog__frame">
+      <h2 class="vn-name" id="vnSpeaker"></h2>
+      <p class="vn-text" id="vnText">
+        <span class="vn-text__body" id="vnTextBody"></span>
+      </p>
+      <!--快进提示-->
+      <span class="vn-text-hint">长按空格可快进</span>
+    </div>
+  </section>
+
+  <!--菜单-->
+  <nav class="vn-menu" id="vnMenu" aria-label="游戏菜单">
+    <div class="vn-menu__buttons">
+      <!--存档按钮（菜单按钮旁边）-->
+      <button class="vn-menu-toggle vn-menu-toggle--save" id="vnSaveToggle" type="button"
+              aria-haspopup="true" aria-expanded="false"
+              title="存档 / 读档" aria-label="存档 / 读档">
+        <span class="vn-save-toggle__icon" aria-hidden="true"></span>
+      </button>
+
+      <button class="vn-menu-toggle" id="vnMenuToggle" type="button"
+              aria-haspopup="true" aria-expanded="false"
+              aria-controls="vnMenuList" title="菜单">
+        <span class="vn-menu-toggle__icon" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <ul class="vn-menu__list" id="vnMenuList" role="menu" aria-labelledby="vnMenuToggle">
+      <li role="none">
+        <a class="vn-menu__item" role="menuitem" href="settingPage.html?from=deduction.html">设置</a>
+      </li>
+      <li role="none">
+        <a class="vn-menu__item" role="menuitem" href="hall.html">退出游戏</a>
+      </li>
+    </ul>
+  </nav>
+
+  <!--黑场遮罩-->
+  <div class="vn-blackout" id="vnBlackout" aria-hidden="true"></div>
+
+  <!--章节标题转场-->
+  <div class="vn-chapter" id="vnChapterTitle" aria-hidden="true">
+    <p class="vn-chapter__kicker" id="vnChapterKicker"></p>
+    <h2 class="vn-chapter__main" id="vnChapterMain"></h2>
+  </div>
+
+  <!--物品栏：推理阶段的「出示线索」环节 -->
+  <section class="dc-inv" id="dcInv" aria-hidden="true" hidden>
+    <div class="dc-inv__backdrop" aria-hidden="true"></div>
+
+    <div class="clue-board-container" role="dialog" aria-modal="true" aria-labelledby="dcInvTitle">
+      <!--顶部标题牌：跨在外框上沿-->
+      <div class="clue-header">
+        <h2 class="clue-board-title" id="dcInvTitle">物 品 栏</h2>
+      </div>
+
+      <!--问句框-->
+      <div class="dialogue-box" id="dcInvAsk">
+        <p class="dialogue-box__text" data-ask>“你一直坚信丈夫是因为无法忍受你，才选择了自杀。但你凭什么如此肯定？”</p>
+        <p class="dialogue-box__text" data-ask>“好好回想起那天发生的事情，有什么证据能证明，他傍晚时分根本没有寻死的念头？”</p>
+        <span class="dialogue-box__hint" id="dcInvHint">按空格快进</span>
+      </div>
+
+      <!--物品区-->
+      <div class="inventory-area">
+        <div class="inventory-grid" id="dcInvGrid"></div>
+      </div>
+
+      <!--底部操作区：选中线索后才能提交-->
+      <div class="action-area">
+        <button type="button" class="submit-btn" id="dcInvSubmit" disabled>出示线索</button>
+      </div>
+    </div>
+  </section>
+
+  <!--存档：模式选择面板 + 6 存档位弹层-->
+  <div class="vn-save" id="vnSave" aria-hidden="true">
+    <div class="vn-save__backdrop" id="vnSaveBackdrop"></div>
+
+    <!-- 模式选择 -->
+    <section class="vn-save__panel" id="vnSavePanel" role="dialog"
+             aria-modal="true" aria-label="存档与读档">
+      <h2 class="vn-save__title">存档 / 读档</h2>
+      <p class="vn-save__hint">选择要进行的操作</p>
+      <div class="vn-save__actions">
+        <button type="button" class="vn-btn vn-save__mode" data-mode="save">手动存档</button>
+        <button type="button" class="vn-btn vn-save__mode" data-mode="load">读取存档</button>
+      </div>
+      <button type="button" class="vn-btn vn-save__close" id="vnSaveCancel">取消</button>
+    </section>
+
+    <!-- 6 个存档位 -->
+    <section class="vn-save__modal" id="vnSaveModal" role="dialog" aria-modal="true" hidden>
+      <h2 class="vn-save__title" id="vnSaveModalTitle">手动存档</h2>
+      <p class="vn-save__hint" id="vnSaveModalHint"></p>
+      <div class="vn-save__grid" id="vnSaveSlots"></div>
+      <button type="button" class="vn-btn vn-save__close" id="vnSaveBack">返回</button>
+    </section>
+  </div>
+
+  <!--本页不自播放内置剧情，开场由 deduction.js 接管-->
+  <script>window.__VN_NO_AUTO_DEMO__ = true;</script>
+  <script src="../js/userStore.js"></script>
+  <script src="../js/main.js?v=20260916"></script>
+  <script src="../js/saveSystem.js?v=20260916"></script>
+  <script src="../js/achieve.js?v=20260916"></script>
+  <script src="../js/deduction.js?v=20260916-2"></script>
+  <script src="../js/fullscreenPref.js"></script>
+</body>
+</html>

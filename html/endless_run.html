@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>黑猫夜跑 · Endless Run</title>
+	<link rel="icon" href="data:,">
+	<link rel="stylesheet" href="../css/endless_run.css">
+	<link rel="stylesheet" href="../css/achieve.css">
+</head>
+<body>
+
+	<!-- 主画布：绘制背景、三角跑道、主角、障碍与猫粮道具 -->
+	<canvas id="game"></canvas>
+
+	<!-- 左上角：移动距离小标 -->
+	<div id="distanceBadge" class="hud hud-left">
+		<span class="badge-dot"></span>
+		<span class="badge-text" id="distanceText">距离 0m</span>
+	</div>
+
+	<!-- 左上角（距离标下方）：无敌猫粮收集进度 + 无敌倒计时条 -->
+	<div id="foodHud" class="hud food-hud">
+		<div class="food-top">
+			<span class="food-icon" aria-hidden="true"></span>
+			<span class="food-name">无敌猫粮</span>
+			<span class="food-count" id="foodCount">0/3</span>
+		</div>
+		<div class="food-pips" id="foodPips">
+			<i class="pip"></i><i class="pip"></i><i class="pip"></i>
+		</div>
+		<div class="rage-track" id="rageTrack"><i class="rage-fill" id="rageFill"></i></div>
+	</div>
+
+	<!-- 右上角：暂停按钮 -->
+	<button id="pauseBtn" class="hud hud-right" type="button" aria-label="暂停">
+		<span class="pause-icon"></span>
+	</button>
+
+	<!-- 操作提示（开场短暂显示后淡出） -->
+	<div id="hint" class="hint">← → 或 A / D 切换跑道 · 收集 3 份猫粮进入无敌加速</div>
+
+	<!-- 即时提示条：吃猫粮 / 无敌启动等反馈 -->
+	<div id="toast" class="toast"></div>
+
+	<!-- 暂停遮罩：回到游戏 / 重新开始 / 回到主页 -->
+	<div id="pauseOverlay" class="overlay">
+		<div class="panel">
+			<div class="panel-title">已暂停</div>
+			<div class="panel-sub" id="pauseDistance">距离 0m</div>
+			<div class="btn-group">
+				<button id="resumeBtn" class="btn btn-primary" type="button">回到游戏</button>
+				<button id="pauseRestartBtn" class="btn btn-ghost" type="button">重新开始</button>
+				<a id="homeBtn" class="btn btn-ghost" href="hall.html">回到主页</a>
+			</div>
+		</div>
+	</div>
+
+	<!-- 胜利遮罩：走满关卡目标距离（1000m / 第二关 1500m，由 JS 按 ?lv= 填写） -->
+	<div id="winOverlay" class="overlay">
+		<div class="panel panel-win">
+			<div class="win-badge"><span class="win-tick">✓</span></div>
+			<div class="panel-title win-title">成功进入梦境</div>
+			<div class="panel-sub">你跑完了 <b id="winTarget">1000m</b> 全程</div>
+			<div class="win-hint">正在进入下一页…</div>
+				<!-- href 由 endless_run.js 按存档返回点改写为「原对话的后一句」 -->
+			<a id="nextPageBtn" class="btn btn-primary" href="plot.html">立即进入</a>
+		</div>
+	</div>
+
+	<!-- 游戏结束遮罩 -->
+	<div id="gameOverOverlay" class="overlay">
+		<div class="panel panel-over">
+			<div class="panel-title over-title">游戏结束</div>
+			<div class="stats">
+				<div class="stat">
+					<div class="stat-label">本次距离</div>
+					<div class="stat-value" id="finalDistance">0 m</div>
+				</div>
+			</div>
+			<button id="restartBtn" class="btn btn-primary" type="button">再来一局</button>
+		</div>
+	</div>
+
+	<!--分账号进度隔离：userStore 必须先于 achieve.js（成就键名要带 u:用户名: 前缀）-->
+	<script src="../js/userStore.js"></script>
+	<script src="../js/achieve.js"></script>
+	<script src="../js/endless_run.js"></script>
+	<!--背景音乐：生死时速（循环；音量沿用游戏内设置，离开页面自动淡出）-->
+	<script>window.PAGE_BGM = { src: '../音乐/生死时速.mp3', loop: true };</script>
+	<script src="../js/pageBgm.js"></script>
+  <!-- 全屏设置：与设置页（外壳）联动，跨页保持全屏 -->
+  <script src="../js/fullscreenPref.js"></script>
+</body>
+</html>

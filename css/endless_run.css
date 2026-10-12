@@ -1,0 +1,539 @@
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	background: #0a1424;   /* 与 JS 里的 BG_SOLID 保持一致（纯色背景） */
+	font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+	touch-action: none;
+}
+
+/* 主画布：占据整个窗口 */
+#game {
+	position: fixed;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	display: block;
+	z-index: 1;
+}
+
+/* HUD 通用层 */
+.hud {
+	position: fixed;
+	z-index: 20;
+}
+
+/* 左上角：距离小标 */
+.hud-left {
+	left: 14px;
+	top: 14px;
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	padding: 9px 16px 9px 12px;
+	border-radius: 999px;
+	background: linear-gradient(135deg, rgba(8, 20, 44, 0.78), rgba(12, 34, 70, 0.72));
+	border: 1px solid rgba(120, 200, 255, 0.35);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), inset 0 0 12px rgba(90, 180, 255, 0.18);
+	backdrop-filter: blur(6px);
+}
+
+.hud-left .badge-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: radial-gradient(circle at 35% 30%, #b9f0ff, #2aa7ff 60%, #0a5fd0);
+	box-shadow: 0 0 8px rgba(80, 190, 255, 0.9);
+	animation: dotPulse 1.4s ease-in-out infinite;
+}
+
+.hud-left .badge-text {
+	color: #eaf7ff;
+	font-size: 17px;
+	font-weight: 600;
+	letter-spacing: 0.5px;
+	text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+@keyframes dotPulse {
+	0%, 100% { transform: scale(1); opacity: 0.85; }
+	50% { transform: scale(1.35); opacity: 1; }
+}
+
+/* 右上角：暂停按钮 */
+.hud-right {
+	right: 16px;
+	top: 14px;
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	border: 1px solid rgba(120, 200, 255, 0.4);
+	background: linear-gradient(145deg, rgba(10, 26, 54, 0.85), rgba(6, 16, 36, 0.8));
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), inset 0 0 12px rgba(80, 180, 255, 0.16);
+	backdrop-filter: blur(6px);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.hud-right:hover {
+	transform: scale(1.08);
+	box-shadow: 0 4px 20px rgba(40, 150, 255, 0.55), inset 0 0 12px rgba(80, 180, 255, 0.25);
+}
+
+.hud-right:active {
+	transform: scale(0.96);
+}
+
+/* 暂停图标：两条竖杠 */
+.hud-right .pause-icon {
+	width: 16px;
+	height: 18px;
+	position: relative;
+	display: block;
+}
+
+.hud-right .pause-icon::before,
+.hud-right .pause-icon::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	width: 5px;
+	height: 18px;
+	border-radius: 2px;
+	background: #eaf7ff;
+	box-shadow: 0 0 6px rgba(120, 210, 255, 0.8);
+}
+
+.hud-right .pause-icon::before { left: 0; }
+.hud-right .pause-icon::after  { right: 0; }
+
+/* 暂停状态下切换为“播放”三角 */
+.hud-right.paused .pause-icon::before,
+.hud-right.paused .pause-icon::after {
+	all: unset;
+	content: "";
+	position: absolute;
+	top: 2px;
+	left: 4px;
+	width: 0;
+	height: 0;
+	border-style: solid;
+	border-width: 7px 0 7px 12px;
+	border-color: transparent transparent transparent #eaf7ff;
+	filter: drop-shadow(0 0 6px rgba(120, 210, 255, 0.8));
+}
+
+/* 顶部操作提示（开场短暂显示后淡出） */
+.hint {
+	position: fixed;
+	top: 22px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 15;
+	padding: 9px 20px;
+	border-radius: 999px;
+	background: rgba(5, 14, 30, 0.72);
+	border: 1px solid rgba(120, 200, 255, 0.28);
+	color: #cfeaff;
+	font-size: 14px;
+	letter-spacing: 1px;
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+	backdrop-filter: blur(4px);
+	opacity: 1;
+	transition: opacity 1s ease;
+	pointer-events: none;
+	white-space: nowrap;
+}
+
+.hint.hidden {
+	opacity: 0;
+}
+
+/* 遮罩层 */
+.overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 30;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	background: rgba(2, 6, 16, 0.62);
+	backdrop-filter: blur(6px);
+}
+
+.overlay.show {
+	display: flex;
+}
+
+/* 面板 */
+.panel {
+	width: min(400px, 86vw);
+	padding: 34px 28px 30px;
+	border-radius: 22px;
+	text-align: center;
+	background: linear-gradient(160deg, rgba(12, 30, 62, 0.96), rgba(4, 12, 28, 0.96));
+	border: 1px solid rgba(120, 200, 255, 0.4);
+	box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6), inset 0 0 24px rgba(70, 170, 255, 0.12);
+	animation: panelIn 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes panelIn {
+	from { transform: translateY(18px) scale(0.96); opacity: 0; }
+	to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.panel-title {
+	font-size: 30px;
+	font-weight: 700;
+	color: #eaf7ff;
+	letter-spacing: 3px;
+	margin-bottom: 8px;
+	text-shadow: 0 0 16px rgba(90, 190, 255, 0.6);
+}
+
+.panel-sub {
+	font-size: 15px;
+	color: #9fc6e8;
+	margin-bottom: 22px;
+	letter-spacing: 1px;
+}
+
+.panel-over .over-title {
+	color: #ffd7d7;
+	text-shadow: 0 0 16px rgba(255, 120, 120, 0.6);
+}
+
+/* 统计（本次 / 最佳） */
+.stats {
+	display: flex;
+	justify-content: center;
+	gap: 14px;
+	margin: 18px 0 26px;
+}
+
+.stat {
+	flex: 1;
+	padding: 14px 8px;
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(120, 200, 255, 0.2);
+}
+
+.stat-label {
+	font-size: 13px;
+	color: #9fc6e8;
+	letter-spacing: 1px;
+	margin-bottom: 8px;
+}
+
+.stat-value {
+	font-size: 30px;
+	font-weight: 800;
+	color: #eaf7ff;
+	font-variant-numeric: tabular-nums;
+}
+
+/* 按钮 */
+.btn {
+	display: inline-block;
+	padding: 13px 36px;
+	border: none;
+	border-radius: 999px;
+	font-size: 17px;
+	font-weight: 700;
+	letter-spacing: 2px;
+	cursor: pointer;
+	color: #04263f;
+	background: linear-gradient(135deg, #7fe0ff, #2aa7ff 55%, #0a7be0);
+	box-shadow: 0 8px 22px rgba(30, 140, 255, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+	transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.btn:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 12px 28px rgba(30, 140, 255, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.btn:active {
+	transform: translateY(0) scale(0.97);
+}
+
+/* 暂停面板：三选项竖排 */
+.btn-group {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-top: 4px;
+}
+
+.btn-ghost {
+	padding: 12px 28px;
+	font-size: 16px;
+	color: #cfeaff;
+	background: rgba(120, 200, 255, 0.10);
+	border: 1px solid rgba(120, 200, 255, 0.38);
+	box-shadow: none;
+	text-decoration: none;
+}
+
+.btn-ghost:hover {
+	color: #fff;
+	background: rgba(120, 200, 255, 0.20);
+	box-shadow: 0 0 18px rgba(60, 170, 255, 0.28);
+}
+
+/* 胜利面板 */
+.panel-win {
+	border-color: rgba(255, 224, 130, 0.55);
+	box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(255, 210, 110, 0.16);
+	background: linear-gradient(160deg, rgba(48, 40, 16, 0.96), rgba(14, 20, 40, 0.96));
+}
+
+.win-title {
+	color: #ffe9a8;
+	text-shadow: 0 0 20px rgba(255, 205, 90, 0.75);
+}
+
+/* 成功标志：金色圆章 + 打勾 + 光晕脉冲 */
+.win-badge {
+	width: 92px;
+	height: 92px;
+	margin: 0 auto 16px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: radial-gradient(circle at 35% 30%, #fff3cf, #ffcb47 55%, #e39a12);
+	box-shadow: 0 0 0 8px rgba(255, 205, 90, 0.16), 0 12px 34px rgba(255, 170, 40, 0.5);
+	animation: badgePop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.4), badgeGlow 1.6s ease-in-out 0.6s infinite;
+}
+
+.win-tick {
+	font-size: 50px;
+	font-weight: 900;
+	color: #5a3a00;
+	line-height: 1;
+}
+
+@keyframes badgePop {
+	from { transform: scale(0.2) rotate(-25deg); opacity: 0; }
+	to { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+@keyframes badgeGlow {
+	0%, 100% { box-shadow: 0 0 0 8px rgba(255, 205, 90, 0.16), 0 12px 34px rgba(255, 170, 40, 0.5); }
+	50% { box-shadow: 0 0 0 16px rgba(255, 205, 90, 0.08), 0 12px 44px rgba(255, 170, 40, 0.75); }
+}
+
+.win-hint {
+	font-size: 13px;
+	color: #cbb98a;
+	letter-spacing: 1px;
+	margin: 4px 0 18px;
+}
+
+/* ==========================================================
+   无敌猫粮 HUD（距离标下方）
+   ========================================================== */
+.food-hud {
+	left: 14px;
+	top: 70px;
+	min-width: 190px;
+	padding: 10px 15px 11px;
+	border-radius: 16px;
+	background: linear-gradient(135deg, rgba(48, 32, 8, 0.80), rgba(26, 18, 42, 0.74));
+	border: 1px solid rgba(255, 190, 80, 0.34);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), inset 0 0 12px rgba(255, 170, 60, 0.16);
+	backdrop-filter: blur(6px);
+	transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+/* 集满 3 份：整体发光提醒“即将无敌” */
+.food-hud.full {
+	border-color: rgba(255, 214, 120, 0.95);
+	box-shadow: 0 0 24px rgba(255, 180, 60, 0.55), inset 0 0 18px rgba(255, 190, 80, 0.30);
+	animation: foodPulse 1.05s ease-in-out infinite;
+}
+
+@keyframes foodPulse {
+	0%, 100% { transform: scale(1); }
+	50% { transform: scale(1.035); }
+}
+
+.food-top {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+/* 小猫粮碗图标（纯 CSS） */
+.food-icon {
+	position: relative;
+	width: 15px;
+	height: 14px;
+	border-radius: 3px 3px 8px 8px / 3px 3px 10px 10px;
+	background: linear-gradient(180deg, #e8f4ff, #9fc4e8 45%, #4a6f9c);
+	box-shadow: 0 0 9px rgba(255, 190, 90, 0.85);
+}
+
+/* 金色碗沿 */
+.food-icon::before {
+	content: "";
+	position: absolute;
+	left: -2px;
+	right: -2px;
+	top: -2px;
+	height: 4px;
+	border-radius: 999px;
+	background: linear-gradient(90deg, #ffe08a, #ff9d1c);
+}
+
+/* 碗里露出来的一粒猫粮 */
+.food-icon::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: -6px;
+	width: 5px;
+	height: 4px;
+	transform: translateX(-50%);
+	border-radius: 50%;
+	background: #c98a4b;
+}
+
+.food-name {
+	color: #ffe9c2;
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 1px;
+	white-space: nowrap;
+}
+
+.food-count {
+	margin-left: auto;
+	color: #ffd98a;
+	font-size: 13px;
+	letter-spacing: 1px;
+	font-variant-numeric: tabular-nums;
+}
+
+/* 三个进度格 */
+.food-pips {
+	display: flex;
+	gap: 6px;
+	margin-top: 8px;
+}
+
+.food-pips .pip {
+	flex: 1;
+	height: 8px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.10);
+	border: 1px solid rgba(255, 190, 90, 0.30);
+	transition: background 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.food-pips .pip.on {
+	background: linear-gradient(90deg, #ffe08a, #ff9d1c);
+	border-color: rgba(255, 214, 120, 0.95);
+	box-shadow: 0 0 10px rgba(255, 170, 50, 0.85);
+}
+
+/* 无敌倒计时条（仅无敌期间显示） */
+.rage-track {
+	height: 5px;
+	margin-top: 7px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.08);
+	overflow: hidden;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+}
+
+.rage-track.on {
+	opacity: 1;
+}
+
+.rage-fill {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border-radius: 999px;
+	transform-origin: left center;
+	transform: scaleX(0);
+	background: linear-gradient(90deg, #ffd166, #ff5a3c);
+	box-shadow: 0 0 10px rgba(255, 120, 40, 0.9);
+}
+
+/* ==========================================================
+   即时提示条（吃猫粮 / 无敌启动）
+   ========================================================== */
+.toast {
+	position: fixed;
+	left: 50%;
+	top: 72px;
+	z-index: 25;
+	padding: 9px 22px;
+	border-radius: 999px;
+	background: rgba(6, 16, 34, 0.84);
+	border: 1px solid rgba(120, 200, 255, 0.30);
+	color: #eaf7ff;
+	font-size: 15px;
+	font-weight: 600;
+	letter-spacing: 1.5px;
+	white-space: nowrap;
+	opacity: 0;
+	pointer-events: none;
+	transform: translate(-50%, -10px);
+	transition: opacity 0.25s ease, transform 0.25s ease;
+	backdrop-filter: blur(4px);
+}
+
+.toast.show {
+	opacity: 1;
+	transform: translate(-50%, 0);
+}
+
+.toast.warm {
+	border-color: rgba(255, 190, 80, 0.65);
+	color: #ffe9c2;
+	box-shadow: 0 0 22px rgba(255, 160, 40, 0.35);
+}
+
+.toast.rage {
+	border-color: rgba(255, 160, 60, 0.95);
+	color: #fff3d6;
+	box-shadow: 0 0 30px rgba(255, 140, 30, 0.65);
+	animation: rageToast 0.35s ease-out;
+}
+
+@keyframes rageToast {
+	from { transform: translate(-50%, 0) scale(0.86); }
+	to { transform: translate(-50%, 0) scale(1); }
+}
+
+/* 小屏适配 */
+@media screen and (max-width: 420px) {
+	.hud-left .badge-text { font-size: 15px; }
+	.hud-right { width: 46px; height: 46px; }
+	.panel-title { font-size: 26px; }
+	.stat-value { font-size: 26px; }
+	.food-hud { top: 64px; min-width: 164px; padding: 9px 12px 10px; }
+	.food-name, .food-count { font-size: 12px; }
+	.toast { font-size: 13px; padding: 8px 16px; letter-spacing: 1px; }
+}

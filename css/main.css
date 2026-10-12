@@ -1,0 +1,923 @@
+/* ---------- ① 全局设计令牌 ---------- */
+:root {
+  --font-cn: "Kaiti SC", "STKaiti", "KaiTi", "楷体", "Noto Serif SC",
+             "Source Han Serif SC", "Songti SC", "SimSun", serif;
+  --font-en: "Cinzel", "Trajan Pro", "Cormorant Garamond", Georgia, serif;
+
+  /* 色板：墨夜 / 纸 / 微光金 */
+  --c-night-0: #050409;              /* 最深夜色 */
+  --c-night-1: #0c0a14;
+  --c-night-2: #171226;
+  --c-paper:    #ece3d1;             /* 纸面暖白（主文字） */
+  --c-paper-dim: #a99f88;
+  --c-gold:     #d9b87f;             /* 烛火微光金（点缀/强调） */
+  --c-gold-bright: #f2dcab;
+  --c-line:     rgba(217, 184, 127, 0.30);   /* 细线·常规 */
+  --c-line-soft: rgba(217, 184, 127, 0.15);  /* 细线·弱 */
+  --c-shadow:   rgba(0, 0, 0, 0.55);
+
+  /* 布局几何 */
+  --dlg-h:     30%;                  /* 对话框高度 = 屏高 30% */
+  --dlg-gap-x: 3%;                   /* 左右留白 3% */
+  --dlg-gap-b: 3%;                   /* 底部留白 3% */
+  --pt-h: clamp(280px, 56vh, 64vh);  /* 立绘默认高度（可按需覆盖） */
+  --pt-sink: 0.3;                    /* 立绘被对话框遮住的比例：0＝整幅贴在框上方，0.5＝一半压在框后，1＝整幅在框后 */
+  --pt-right: 10%;                   /* 立绘离右边缘的距离 */
+  --pt-shift-x: 0px;                 /* 立绘水平微调（正数向右） */
+  --pt-shift-y: 0px;                 /* 立绘垂直微调（正数向下） */
+
+  /* —— 小黑猫（cat_* 立绘）专用位置：只影响猫，不动其它角色 ——
+     想单独挪猫，只改下面这几个值即可（它们默认为「跟随全局」）。 */
+  --pt-cat-h:       var(--pt-h);     /* 猫的立绘高度 */
+  --pt-cat-sink:    var(--pt-sink);  /* 猫被对话框遮住的比例 */
+  --pt-cat-right:   1%;              /* 猫离右边缘的距离（只影响猫；想跟全局一致就写 var(--pt-right)） */
+  --pt-cat-shift-x: 0px;             /* 猫的水平微调 */
+  --pt-cat-shift-y: 0px;             /* 猫的垂直微调 */
+
+  /*麻矢ms*/
+  --pt-ms-h:       90vh;            
+  --pt-ms-sink:    0.42;
+
+ /* —— 知美（zm）—— */
+  --pt-zm-h:       80vh;
+  --pt-zm-sink:    0.4;
+
+  /* —— 沙耶香（sy）—— */
+  --pt-sy-h:       80vh;
+  --pt-sy-sink:    0.4;
+
+  /* —— 千崎（qq）—— */
+  --pt-qq-h:       80vh;
+  --pt-qq-sink:    0.4;
+
+  /* —— 峰岸（fa）—— */
+  --pt-fa-h:       80vh;
+  --pt-fa-sink:    0.4;
+
+  /* —— 久住（jz）—— */
+  --pt-jz-h:       80vh;
+  --pt-jz-sink:    0.4;
+
+   /* —— 南乡夫妇（nx：nxlh 纯太郎 / nxfr 菊子）—— */
+  --pt-nx-h:       80vh;
+  --pt-nx-sink:    0.4;
+
+  /* 圆角 */
+  --r-dlg: clamp(10px, 1.6vh, 18px);
+}
+
+/* ---------- ② 基础重置与页面背景 ---------- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-cn);
+  color: var(--c-paper);
+  background:
+    radial-gradient(120% 90% at 72% 6%, #1b1530 0%, transparent 55%),
+    radial-gradient(140% 120% at 85% 100%, #241a2e 0%, transparent 60%),
+    linear-gradient(180deg, #0d0b16 0%, #07060c 60%, var(--c-night-0) 100%);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- ③ 人物立绘插槽 ---------- */
+.vn-portrait {
+  position: fixed;
+  z-index: 10;                       /* 低于对话框(20)：压在框后的部分会被对话框盖住 */
+  right: var(--pt-right);
+  /* 立绘底边位置 = 对话框顶边 −（立绘高度 × 遮住比例）
+     --pt-sink 0 → 整幅贴在对话框上方
+     --pt-sink 0.3 → 下 30% 落在对话框后面（当前）
+     --pt-sink 1 → 整幅都在对话框后面 */
+  bottom: calc(var(--dlg-gap-b) + var(--dlg-h) - var(--pt-h) * var(--pt-sink));
+  height: var(--pt-h);
+  transform: translate(var(--pt-shift-x), var(--pt-shift-y));  /* 微调用 */
+  pointer-events: none;              /* 不拦截点击 */
+  filter:
+    drop-shadow(0 10px 22px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 0 14px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 3px rgba(240, 217, 166, 0.12)); /* 微光勾勒剪影 */
+  transition: opacity 0.4s ease, filter 0.4s ease;
+}
+
+/* ============================================================
+   立绘「每个角色单独设大小与页边距」配置表
+   ------------------------------------------------------------
+   JS 会在每次切换立绘时，把角色家族写到容器上（cat_confident → cat，ms_smile → ms，
+   zm_wx → zm …），于是下面每条规则只管一个角色。
+
+   想调某个角色，只改它对应的那几个变量即可（写在 :root 里最方便，写在别处也能生效）：
+     --pt-<族>-h        立绘高度（＝大小）       例：--pt-ms-h: 60vh;
+     --pt-<族>-right    距屏幕右边的距离（页边距） 例：--pt-cat-right: 6%;
+     --pt-<族>-bottom   距屏幕下边的距离（页边距） 例：--pt-cat-bottom: 8%;
+     --pt-<族>-sink     被对话框遮住的比例（不想直接算 bottom 时用它）
+     --pt-<族>-shift-x  水平像素微调（正数向右）
+     --pt-<族>-shift-y  垂直像素微调（正数向下）
+
+   没写的变量一律「跟随全局」（--pt-h / --pt-right / --pt-sink / --pt-shift-*），
+   所以现在这套默认值与改动前完全一致 —— 不写就不变。
+   可用家族名：cat 小黑 · ms 麻矢 · zm 知美 · sy 沙耶香 · qq 千崎 · fa 峰岸 ·
+              jz 久住 · lh 灵魂 · nx 南乡夫妇（另有 soul/main/police/boy/sis/girl 等按美术目录名）
+   ============================================================ */
+.vn-portrait[data-portrait-family] {
+  right: var(--pt-right);
+  bottom: calc(var(--dlg-gap-b) + var(--dlg-h) - var(--pt-h) * var(--pt-sink));
+  height: var(--pt-h);
+  transform: translate(var(--pt-shift-x), var(--pt-shift-y));
+}
+
+/* —— 小黑（cat）—— */
+.vn-portrait[data-portrait-family="cat"] {
+  --pt-h-here:     var(--pt-cat-h, var(--pt-h));
+  right:           var(--pt-cat-right, var(--pt-right));
+  height:          var(--pt-h-here);
+  bottom:          var(--pt-cat-bottom,
+                     calc(var(--dlg-gap-b) + var(--dlg-h) - var(--pt-h-here) * var(--pt-cat-sink, var(--pt-sink))));
+  transform:       translate(var(--pt-cat-shift-x, var(--pt-shift-x)), var(--pt-cat-shift-y, var(--pt-shift-y)));
+}
+
+/* —— 麻矢（ms）—— */
+.vn-portrait[data-portrait-family="ms"] {
+  --pt-h-here:     var(--pt-ms-h, 64vh);
+  right:           var(--pt-ms-right, var(--pt-right));
+  height:          var(--pt-h-here);
+  bottom:          var(--pt-ms-bottom,
+                     calc(var(--dlg-gap-b) + var(--dlg-h) - var(--pt-h-here) * var(--pt-ms-sink, var(--pt-sink))));
+  transform:       translate(var(--pt-ms-shift-x, var(--pt-shift-x)), var(--pt-ms-shift-y, var(--pt-shift-y)));
+}
+
+/* —— 知美（zm）—— */
+.vn-portrait[data-portrait-family="zm"] {
+  --pt-h-here:     var(--pt-zm-h, 64vh);
+  right:           var(--pt-zm-right, var(--pt-right));
+  height:          var(--pt-h-here);
+  bottom:          var(--pt-zm-bottom,
+                     calc(var(--dlg-gap-b) + var(--dlg-h) - var(--pt-h-here) * var(--pt-zm-sink, var(--pt-sink))));
+  transform:       translate(var(--pt-zm-shift-x, var(--pt-shift-x)), var(--pt-zm-shift-y, var(--pt-shift-y)));
+}
+
+/* —— 沙耶香（sy）—— */
+.vn-portrait[data-portrait-family="sy"] {
+  --pt-h-here:     var(--pt-sy-h, 64vh);
+  right:           var(--pt-sy-right, var(--pt-right));
+  height:          var(--pt-h-here);
+  bottom:          var(--pt-sy-bottom,
+                     calc(var(--dlg-gap-b) + var(--dlg-h) - var(--pt-h-here) * var(--pt-sy-sink, var(--pt-sink))));
+  transform:       translate(var(--pt-sy-shift-x, var(--pt-shift-x)), var(--pt-sy-shift-y, var(--pt-shift-y)));
+}
+
+/* —— 千崎（qq）—— */
+.vn-portrait[data-portrait-family="qq"] {
+  --pt-h-here:     var(--pt-qq-h, var(--pt-h));
+  right:           var(--pt-qq-right, var(--pt-right));
+  height:          var(--pt-h-here);
+  bottom:          var(--pt-qq-bottom,
+                     calc(var(--dlg-gap-b) + var(--dlg-h) - var(--pt-h-here) * var(--pt-qq-sink, var(--pt-sink))));
+  transform:       translate(var(--pt-qq-shift-x, var(--pt-shift-x)), var(--pt-qq-shift-y, var(--pt-shift-y)));
+}
+
+/* —— 峰岸（fa）—— */
+.vn-portrait[data-portrait-family="fa"] {
+  --pt-h-here:     var(--pt-fa-h, var(--pt-h));
+  right:           var(--pt-fa-right, var(--pt-right));
+  height:          var(--pt-h-here);
+  bottom:          var(--pt-fa-bottom,
+                     calc(var(--dlg-gap-b) + var(--dlg-h) - var(--pt-h-here) * var(--pt-fa-sink, var(--pt-sink))));
+  transform:       translate(var(--pt-fa-shift-x, var(--pt-shift-x)), var(--pt-fa-shift-y, var(--pt-shift-y)));
+}
+
+/* —— 久住（jz）—— */
+.vn-portrait[data-portrait-family="jz"] {
+  --pt-h-here:     var(--pt-jz-h, var(--pt-h));
+  right:           var(--pt-jz-right, var(--pt-right));
+  height:          var(--pt-h-here);
+  bottom:          var(--pt-jz-bottom,
+                     calc(var(--dlg-gap-b) + var(--dlg-h) - var(--pt-h-here) * var(--pt-jz-sink, var(--pt-sink))));
+  transform:       translate(var(--pt-jz-shift-x, var(--pt-shift-x)), var(--pt-jz-shift-y, var(--pt-shift-y)));
+}
+
+/* —— 灵魂（lh / soul）—— */
+.vn-portrait[data-portrait-family="lh"],
+.vn-portrait[data-portrait-family="soul"] {
+  --pt-h-here:     var(--pt-lh-h, var(--pt-h));
+  right:           var(--pt-lh-right, var(--pt-right));
+  height:          var(--pt-h-here);
+  bottom:          var(--pt-lh-bottom,
+                     calc(var(--dlg-gap-b) + var(--dlg-h) - var(--pt-h-here) * var(--pt-lh-sink, var(--pt-sink))));
+  transform:       translate(var(--pt-lh-shift-x, var(--pt-shift-x)), var(--pt-lh-shift-y, var(--pt-shift-y)));
+}
+
+/* —— 南乡夫妇（nx：nxlh 纯太郎 / nxfr 菊子）—— */
+.vn-portrait[data-portrait-family="nx"],
+.vn-portrait[data-portrait-family="nxlh"],
+.vn-portrait[data-portrait-family="nxfr"] {
+  --pt-h-here:     var(--pt-nx-h, var(--pt-h));
+  right:           var(--pt-nx-right, var(--pt-right));
+  height:          var(--pt-h-here);
+  bottom:          var(--pt-nx-bottom,
+                     calc(var(--dlg-gap-b) + var(--dlg-h) - var(--pt-h-here) * var(--pt-nx-sink, var(--pt-sink))));
+  transform:       translate(var(--pt-nx-shift-x, var(--pt-shift-x)), var(--pt-nx-shift-y, var(--pt-shift-y)));
+}
+
+/* —— 南乡纯太郎 / 菊子：想再细分到「单个角色」，用 data-portrait-key ——
+   例：只把「菊子」（nxfr）压低一点
+   .vn-portrait[data-portrait-key="nxfr"] { bottom: 10%; height: 52vh; } */
+
+.vn-portrait__img {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+
+/* 隐藏状态（VN.portrait.hide() 使用） */
+.vn-portrait.is-hidden {
+  opacity: 0;
+  filter: none;
+}
+
+/* 未放图时的占位提示 */
+.vn-portrait:has(.vn-portrait__img:not([src])) {
+  min-width: min(34vw, 300px);
+}
+
+.vn-portrait:has(.vn-portrait__img:not([src]))::before {
+  content: "立绘位置 · 右侧 · 下半幅压在对话框后";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0 10px;
+  font-size: clamp(12px, 1.7vh, 15px);
+  letter-spacing: 0.18em;
+  text-align: center;
+  color: rgba(217, 184, 127, 0.4);
+  border: 1px dashed rgba(217, 184, 127, 0.28);
+  border-radius: 8px;
+  background: rgba(10, 8, 18, 0.25);
+}
+
+/* ---------- ④ 对话框 ---------- */
+.vn-dialog {
+  position: fixed;
+  z-index: 20;
+  left: var(--dlg-gap-x);
+  right: var(--dlg-gap-x);
+  bottom: var(--dlg-gap-b);
+  height: var(--dlg-h);
+  overflow: hidden;
+  border-radius: var(--r-dlg);
+  color: var(--c-paper);
+  background: linear-gradient(
+    165deg,
+    rgba(46, 38, 60, 0.20) 0%,
+    rgba(24, 20, 34, 0.18) 36%,
+    rgba(10, 9, 16, 0.36) 100%
+  );
+  border: 1px solid rgba(217, 184, 127, 0.16);
+  backdrop-filter: blur(14px) saturate(0.5);
+  -webkit-backdrop-filter: blur(14px) saturate(0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -18px 40px rgba(0, 0, 0, 0.28),
+    0 22px 50px var(--c-shadow);
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+/* 上沿微光线 */
+.vn-dialog::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 6%;
+  right: 6%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(242, 220, 171, 0.75), transparent);
+  box-shadow: 0 0 8px rgba(242, 220, 171, 0.35);
+  pointer-events: none;
+}
+
+/* 极细内框 */
+.vn-dialog::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 6px;
+  border: 1px solid rgba(217, 184, 127, 0.10);
+  border-radius: calc(var(--r-dlg) - 6px);
+  pointer-events: none;
+}
+
+/* 对话框隐藏（VN.dialog.hide() 使用） */
+.vn-dialog.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* ---------- ⑤ 框内排版 ---------- */
+.vn-dialog__frame {
+  position: relative;
+  z-index: 3;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(10px, 2vh, 18px) clamp(18px, 3.2vw, 46px) clamp(8px, 2vh, 18px);
+}
+
+/* 名字牌 */
+.vn-name {
+  flex: 0 0 auto;
+  width: fit-content;
+  margin: 0 0 clamp(6px, 1.4vh, 12px);
+  transform: rotate(-0.6deg);
+  font-size: clamp(14px, 2.1vh, 19px);
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;               /* 抵消末字后的字距，视觉居中 */
+  line-height: 1.6;
+  color: var(--c-gold-bright);
+  background: linear-gradient(120deg, rgba(24, 20, 34, 0.82), rgba(30, 25, 42, 0.55));
+  border: 1px solid var(--c-line);
+  border-left: 2px solid rgba(217, 184, 127, 0.6);
+  border-radius: 0 12px 0 12px;      /* 不对称圆角 */
+  padding: 0.1em 0.95em 0.16em;
+  text-shadow: 0 0 12px rgba(217, 184, 127, 0.35), 0 1px 2px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* 旁白：隐藏名字牌，保留占位防跳动 */
+.vn-name.is-empty {
+  visibility: hidden;
+}
+
+/* 台词区 */
+.vn-text {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  font-size: clamp(15px, 2.2vh, 21px);
+  line-height: 1.9;
+  letter-spacing: 0.05em;
+  color: var(--c-paper);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(217, 184, 127, 0.25) transparent;
+}
+
+/* 台词正文 */
+.vn-text__body {
+  margin: auto 0;
+}
+
+.vn-text::-webkit-scrollbar { width: 4px; }
+.vn-text::-webkit-scrollbar-thumb {
+  background: rgba(217, 184, 127, 0.25);
+  border-radius: 2px;
+}
+.vn-text::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- ⑥ 按钮风格 ---------- */
+.vn-btn {
+  --glow: rgba(240, 220, 171, 0.45);
+  font-family: var(--font-cn);
+  font-size: clamp(13px, 1.9vh, 17px);
+  letter-spacing: 0.24em;
+  text-indent: 0.24em;
+  line-height: 1.4;
+  color: var(--c-gold-bright);
+  background: rgba(16, 13, 24, 0.35);
+  border: 1px solid rgba(217, 184, 127, 0.5);
+  border-radius: 6px;
+  padding: 0.55em 1.9em;
+  cursor: pointer;
+  text-shadow: none;
+  box-shadow: inset 0 0 0 rgba(0, 0, 0, 0);
+  transition:
+    color 0.3s ease,
+    border-color 0.3s ease,
+    background-color 0.3s ease,
+    box-shadow 0.35s ease,
+    text-shadow 0.35s ease,
+    transform 0.2s ease;
+}
+
+.vn-btn:hover {
+  color: #fff3d8;
+  border-color: rgba(230, 198, 135, 0.9);
+  background: rgba(217, 184, 127, 0.08);
+  box-shadow:
+    0 0 16px rgba(217, 184, 127, 0.30),
+    inset 0 0 10px rgba(217, 184, 127, 0.10); /* 柔和光晕 */
+  text-shadow: 0 0 10px var(--glow);
+}
+
+.vn-btn:active {
+  transform: scale(0.98);
+}
+
+.vn-btn:focus-visible {
+  outline: 1px solid var(--c-gold);
+  outline-offset: 3px;
+}
+
+.vn-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+/* 文字效果样式 */
+
+/* ---------- ① 新增设计令牌 ---------- */
+:root {
+  /* 台词正文：衬线字体栈 */
+  --font-serif: "Noto Serif SC", "Source Han Serif SC",
+                "Songti SC", "STSong", "SimSun", "NSimSun",
+                "FangSong", "仿宋", "宋体",
+                Georgia, "Times New Roman", serif;
+
+  /* 台词字号 */
+  --text-dialog: clamp(15px, 2.1vh + 0.4vw, 21px);
+}
+
+/* ---------- ② 台词排版 ---------- */
+.vn-text {
+  font-family: var(--font-serif);
+  font-size: var(--text-dialog);
+  line-height: 1.9;                 /* 行距留足，衬线体阅读舒适 */
+  letter-spacing: 0.045em;          /* 衬线正文的极轻微字距 */
+}
+
+/* 每段最多三行，超出截断 */
+.vn-text__body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+/* ---------- ③ 右下角操作提示 ---------- */
+.vn-text-hint {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  margin: 2px 2px 0 0;
+  font-family: var(--font-serif);
+  font-size: clamp(10px, 1.3vh, 13px);
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  text-indent: 0.12em;              /* 抵消末字字距，视觉居中 */
+  color: rgba(217, 184, 127, 0.6);
+  text-shadow: 0 0 6px rgba(217, 184, 127, 0.16);
+  pointer-events: none;             /* 不拦截对话框点击推进 */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- ④ 立绘切换 ---------- */
+.vn-portrait--leaving {
+  opacity: 0;
+  filter: none;
+}
+
+/* 菜单样式 */
+
+/* ---------- ① 新增设计令牌 ---------- */
+:root {
+  --z-menu: 40;          /* 悬浮层：高于对话框(z20)与立绘(z10) */
+  --menu-gap: 3%;        /* 距右上角的边距（与对话框 3% 体系一致） */
+}
+
+/* ---------- ② 菜单容器 ---------- */
+.vn-menu {
+  position: fixed;
+  top: var(--menu-gap);
+  right: var(--menu-gap);
+  z-index: var(--z-menu);
+  font-family: var(--font-cn);
+}
+
+/* ---------- ③ 圆形菜单按钮 ---------- */
+.vn-menu-toggle {
+  display: grid;
+  place-items: center;
+  width: clamp(42px, 5.2vh, 56px);
+  aspect-ratio: 1;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  color: rgba(240, 220, 171, 0.85);
+  background:
+    radial-gradient(circle at 32% 26%, rgba(62, 51, 82, 0.92), rgba(16, 13, 24, 0.94) 72%);
+  border: 1px solid rgba(217, 184, 127, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 6px 18px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition:
+    color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    background-color 0.25s ease,
+    transform 0.16s ease,
+    text-shadow 0.25s ease;
+}
+
+/* 悬浮：一线微光泛开 */
+.vn-menu-toggle:hover {
+  color: #fff3d8;
+  border-color: rgba(240, 217, 166, 0.9);
+  box-shadow:
+    0 0 20px rgba(217, 184, 127, 0.35),
+    inset 0 0 14px rgba(217, 184, 127, 0.12),
+    0 6px 18px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 0 10px rgba(240, 217, 166, 0.6);
+  transform: translateY(-1px);
+}
+
+/* 按下：轻微收缩 */
+.vn-menu-toggle:active {
+  transform: scale(0.94);
+  box-shadow:
+    0 0 12px rgba(217, 184, 127, 0.45),
+    inset 0 0 10px rgba(217, 184, 127, 0.20);
+}
+
+/* 展开时：按钮微光常亮 */
+.vn-menu.is-open .vn-menu-toggle {
+  color: #fff3d8;
+  border-color: rgba(240, 217, 166, 0.85);
+  box-shadow:
+    0 0 18px rgba(217, 184, 127, 0.38),
+    inset 0 0 12px rgba(217, 184, 127, 0.16);
+  text-shadow: 0 0 10px rgba(240, 217, 166, 0.55);
+}
+
+.vn-menu-toggle:focus-visible {
+  outline: 1px solid var(--c-gold);
+  outline-offset: 3px;
+}
+
+/* 按钮图标：三条细横线 */
+.vn-menu-toggle__icon {
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  box-shadow: 0 -6px 0 currentColor, 0 6px 0 currentColor;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+/* ---------- ④ 下拉菜单 ---------- */
+.vn-menu__list {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  min-width: clamp(150px, 22vw, 190px);
+  margin: 0;
+  padding: 10px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  color: var(--c-paper);
+  background: linear-gradient(165deg, rgba(32, 26, 45, 0.94), rgba(12, 10, 18, 0.96));
+  border: 1px solid rgba(217, 184, 127, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 16px 36px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  /* 收拢态：透明 + 上移微缩 */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px) scale(0.97);
+  transform-origin: top right;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    visibility 0.18s ease;
+  pointer-events: none;
+}
+
+.vn-menu.is-open .vn-menu__list {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* 项间细分隔线 */
+.vn-menu__list li + li {
+  margin-top: 3px;
+  border-top: 1px solid rgba(217, 184, 127, 0.12);
+  padding-top: 3px;
+}
+
+/* ---------- ⑤ 菜单项（超链接按钮） ---------- */
+.vn-menu__item {
+  position: relative;
+  display: block;
+  padding: 9px 34px 9px 18px;
+  border-radius: 7px;
+  font-size: clamp(13px, 1.9vh, 16px);
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;              /* 抵消末字字距，视觉居中 */
+  text-decoration: none;
+  color: rgba(236, 227, 209, 0.82);
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.25s ease,
+    text-shadow 0.25s ease;
+}
+
+/* 悬浮：柔和微光 + 底色泛金 */
+.vn-menu__item:hover {
+  color: #fff3d8;
+  background: rgba(217, 184, 127, 0.10);
+  text-shadow: 0 0 10px rgba(240, 217, 166, 0.45);
+  box-shadow: inset 0 0 10px rgba(217, 184, 127, 0.08);
+}
+
+.vn-menu__item:focus-visible {
+  outline: 1px solid var(--c-gold);
+  outline-offset: 2px;
+}
+
+/* 右侧小箭头：悬浮时浮现 */
+.vn-menu__item::after {
+  content: '›';
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%) translateX(-4px);
+  font-family: var(--font-serif);
+  color: var(--c-gold);
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.vn-menu__item:hover::after {
+  opacity: 0.85;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* 场景背景样式 */
+
+/* ---------- ① 新增设计令牌 ---------- */
+:root {
+  --z-bg: 0;          /* 场景背景层（最底） */
+  --z-blackout: 100;  /* 整屏黑场遮罩（覆盖全部 UI，含菜单 z40） */
+}
+
+/* ---------- ② 背景层 ---------- */
+.vn-bg {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-bg);
+  overflow: hidden;
+  pointer-events: none;  /* 纯背景：点击穿透，交给全局推进逻辑 */
+  /* 兜底夜色基底 */
+  background:
+    radial-gradient(120% 90% at 72% 6%, #1b1530 0%, transparent 55%),
+    radial-gradient(140% 120% at 85% 100%, #241a2e 0%, transparent 60%),
+    linear-gradient(180deg, #0d0b16 0%, #07060c 60%, var(--c-night-0) 100%);
+}
+
+/* 背景图片：铺满并裁切 */
+.vn-bg__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* 无 src 时隐藏，露出夜色基底 */
+.vn-bg__img:not([src]) {
+  display: none;
+}
+
+/* 氛围层：暗角与上下渐隐 */
+.vn-bg__fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 105% at 50% 38%, transparent 55%, rgba(6, 5, 10, 0.62) 100%),
+    linear-gradient(180deg, rgba(8, 6, 14, 0.30), transparent 20%, transparent 72%, rgba(5, 4, 9, 0.38));
+}
+
+/* ---------- ②b CG 插图层（台词里的 cg 字段触发） ----------
+   整屏插图：z 高于立绘(10)、低于对话框(20)，
+   所以 CG 会盖住背景与立绘，而文字照常显示在 CG 之上。
+   opacity / visibility 由脚本（VN.cg）控制，用于淡入淡出。 */
+:root {
+  --z-cg: 12;
+}
+
+.vn-cg {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-cg);
+  overflow: hidden;
+  pointer-events: none;          /* 纯插图：点击穿透，交给全局推进逻辑 */
+  background: #020203;           /* 插图之外补黑边 */
+  opacity: 0;
+  visibility: hidden;
+  /* 收起时先淡出、再隐藏（visibility 延迟到淡出结束） */
+  transition: opacity 650ms ease, visibility 0s linear 650ms;
+  will-change: opacity;
+}
+.vn-cg.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 650ms ease, visibility 0s linear 0s;
+}
+
+/* CG 播放中隐藏右上角全部菜单键（存档/音量/菜单）——
+   防止 CG 没看完就点按钮造成中途跳转。#vnCg 在 #vnMenu 之前，
+   兄弟选择器即可联动；CG 收起（播完/淡出）后 is-visible 移除，按钮自动恢复。
+   visibility 延迟到 opacity 淡出结束，与 CG 浮出节奏一致。 */
+.vn-cg.is-visible ~ .vn-menu {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 300ms ease, visibility 0s linear 300ms;
+}
+
+/* CG 图片：完整显示不裁切（比例不符时上下/左右留黑边） */
+.vn-cg__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+}
+.vn-cg__img:not([src]) { display: none; }
+
+/* CG 视频（CG 目录里的 mp4 等）：与图片同款铺法 */
+.vn-cg__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  background: #000;
+}
+.vn-cg__video:not([src]) { display: none; }
+
+/* 尊重系统「减少动态效果」偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .vn-cg,
+  .vn-cg.is-visible { transition: none; }
+}
+
+/* ---------- ③ 整屏黑场遮罩 ----------
+   opacity 与 pointer-events 由脚本动态控制 */
+.vn-blackout {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-blackout);
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+/* ---------- ④ 章节标题转场 ----------
+   黑场之上的暗黑哥特风标题卡：整屏居中、上下两段（章节标识 + 中文名）。
+   opacity 由脚本动态控制（VN.scene.playChapterIntro），默认不可见。 */
+:root {
+  --z-chapter: 120;        /* 高于切景黑场(z100)，低于未来任何系统级弹层 */
+  --c-chapter-bone: #ece1cc;   /* 骨白主字 */
+  --c-chapter-dim: rgba(217, 184, 127, 0.72); /* 微光金 */
+}
+
+.vn-chapter {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-chapter);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 2.6vh, 22px);
+  text-align: center;
+  pointer-events: none;    /* 不拦截点击：黑场(z100)负责挡住误操作 */
+  opacity: 0;              /* 默认隐藏 */
+  will-change: opacity;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 上段：章节标识（Chapter 1 / 序章），两侧对称的金色细线点缀 */
+.vn-chapter__kicker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 2.4vw, 34px);
+  margin: 0;
+  font-family: var(--font-en);
+  font-size: clamp(15px, 2.3vh, 22px);
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;      /* 抵消末字字距，视觉居中 */
+  text-transform: uppercase;
+  color: var(--c-chapter-dim);
+  text-shadow:
+    0 0 14px rgba(217, 184, 127, 0.38),
+    0 0 3px rgba(240, 220, 171, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+/* 细线：向文字方向渐亮 */
+.vn-chapter__kicker::before,
+.vn-chapter__kicker::after {
+  content: "";
+  width: clamp(26px, 7vw, 96px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(217, 184, 127, 0.55));
+  box-shadow: 0 0 7px rgba(217, 184, 127, 0.32);
+}
+.vn-chapter__kicker::after {
+  background: linear-gradient(90deg, rgba(217, 184, 127, 0.55), transparent);
+}
+
+/* 未拆出标识时整行隐藏，避免空位 */
+.vn-chapter__kicker.is-empty {
+  display: none;
+}
+
+/* 下段：章节中文大标题（暗黑哥特：骨白 + 微光金晕 + 深阴影） */
+.vn-chapter__main {
+  margin: 0;
+  font-family: var(--font-cn);
+  font-size: clamp(30px, 7.2vh, 66px);
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.24em;
+  text-indent: 0.24em;     /* 抵消末字字距，视觉居中 */
+  color: var(--c-chapter-bone);
+  text-shadow:
+    0 0 30px rgba(240, 220, 171, 0.26),
+    0 0 7px rgba(217, 184, 127, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.95),
+    0 0 1px rgba(0, 0, 0, 0.9);
+}
+
+/* ---------- 大演出（CG 视频）载入提示 ----------
+   只在「视频 CG 正在等首帧」的那段时间显示（此时多半是整屏黑幕），
+   CG 一浮出、或遮幕被揭掉时就隐藏 —— 让玩家知道在读取，而不是卡死。
+   层高夹在黑场（--z-blackout:100）与章节卡（--z-chapter:120）之间。 */
+.vn-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .35s ease;
+  font-family: var(--font-cn);
+  font-size: clamp(14px, 2vh, 19px);
+  letter-spacing: .22em;
+  text-indent: .22em;
+  color: rgba(217, 184, 127, .78);
+  text-shadow: 0 0 14px rgba(217, 184, 127, .28), 0 1px 3px rgba(0, 0, 0, .9);
+}
+.vn-loading.is-on { opacity: 1; }
+.vn-loading > span { animation: vnLoadPulse 1.6s ease-in-out infinite; }
+@keyframes vnLoadPulse {
+  0%, 100% { opacity: .55; }
+  50%      { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vn-loading > span { animation: none; opacity: .85; }
+}

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>黑猫小夜曲 · CG 过场</title>
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+  <!-- 纯 CG 过场页：整屏播放一支 CG（含它自带的音乐），播完自动跳到 next -->
+  <div class="vn-bg" id="vnBg" aria-hidden="true">
+    <img class="vn-bg__img" id="vnBgImg" alt="" />
+    <div class="vn-bg__fx" aria-hidden="true"></div>
+  </div>
+
+  <div class="vn-cg" id="vnCg" aria-hidden="true">
+    <img class="vn-cg__img" id="vnCgImg" alt="CG 插图" />
+    <video class="vn-cg__video" id="vnCgVideo" playsinline preload="auto"></video>
+  </div>
+
+  <div class="vn-blackout" id="vnBlackout" aria-hidden="true"></div>
+
+  <!--CG 载入提示：视频 CG 等首帧的这段时间显示，避免整屏黑着像卡死-->
+  <div class="vn-loading" id="vnLoading" aria-hidden="true"><span>CG 载入中…</span></div>
+
+  <!-- main.js 的其它模块需要这些节点，保持隐藏即可 -->
+  <div style="display:none">
+    <div class="vn-portrait is-hidden" id="vnPortrait" aria-hidden="true">
+      <img class="vn-portrait__img" id="vnPortraitImg" alt="" />
+    </div>
+    <section class="vn-dialog is-hidden" id="vnDialog" aria-label="剧情对话框">
+      <div class="vn-dialog__frame">
+        <h2 class="vn-name" id="vnSpeaker"></h2>
+        <p class="vn-text" id="vnText"><span class="vn-text__body" id="vnTextBody"></span></p>
+      </div>
+    </section>
+    <div class="vn-chapter" id="vnChapterTitle" aria-hidden="true">
+      <p class="vn-chapter__kicker" id="vnChapterKicker"></p>
+      <h2 class="vn-chapter__main" id="vnChapterMain"></h2>
+    </div>
+    <nav id="vnMenu"><button id="vnMenuToggle" type="button"></button><ul id="vnMenuList"></ul></nav>
+  </div>
+
+  <script>window.__VN_NO_AUTO_DEMO__ = true;</script>
+  <script src="../js/main.js"></script>
+  <script>
+  /* 用法（由推理页等跳过来）：
+       cgplay.html?key=CG2&next=plot.html%3Fsave%3Dvn_minigame_return
+     不传 next 时默认回「小游戏返回点」，即剧情中断处。
+     图片 CG 播放片刻后自动前进；视频 CG 等整段播完再前进；循环型 CG 不自动前进。 */
+  (function () {
+    'use strict';
+    function q(name, def) {
+      var m = new RegExp('[?&]' + name + '=([^&]+)').exec(window.location.search || '');
+      if (!m) return def;
+      try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+    }
+    function log(m) { if (window.console && console.info) console.info('[CG 过场] ' + m); }
+
+    var KEY  = q('key', '');
+    var NEXT = q('next', 'plot.html?save=vn_minigame_return');
+    log('key=' + JSON.stringify(KEY) + ' next=' + NEXT);
+
+    function go() { window.location.replace(NEXT); }
+
+    if (!KEY || !window.VN || !window.VN.cg || !window.VN.cg.apply) {
+      log('缺少 CG 模块或 key，直接前进。');
+      go();
+      return;
+    }
+
+    /* CG 自带的音乐（cgLib 里配的 bgm 字段） */
+    try {
+      var music = VN.cg.musicOf ? VN.cg.musicOf(KEY) : null;
+      if (music && window.VN.bgm && window.VN.bgm.play) {
+        window.VN.bgm.play(music);
+        log('播放 CG 自带音乐：' + music);
+      }
+    } catch (e) {}
+
+    var started = false;
+    function start() {
+      if (started) return;
+      started = true;
+      log('开始播放：' + KEY);
+      VN.cg.apply(KEY, function (stillPlaying) {
+        if (stillPlaying) { log('循环型 CG，不自动前进。'); return; }
+        log('CG 播完，回到：' + NEXT);
+        window.setTimeout(go, 280);
+      });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, false);
+    else start();
+  })();
+  </script>
+  <!-- 全屏设置：与设置页（外壳）联动，跨页保持全屏 -->
+  <script src="../js/fullscreenPref.js"></script>
+</body>
+</html>
